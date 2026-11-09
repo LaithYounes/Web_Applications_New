@@ -1,0 +1,14 @@
+.env
+.env.*
+!.env.example
+auth.json
+*.sqlite*
+*.log
+vendor/
+node_modules/
+target/
+.phpunit.result.cache
+/main-app/laravel/public/storage
+/main-app/laravel/storage/*.key
+/main-app/laravel/storage/app/public/products/
+/main-app/laravel/public/php-test.php

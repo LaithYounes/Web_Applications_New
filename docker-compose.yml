@@ -1,0 +1,128 @@
+
+name: ecommerce2026
+
+services:
+
+  mysql:
+    image: mysql:8.4
+    container_name: ecommerce2026-mysql
+    restart: unless-stopped
+
+    environment:
+      MYSQL_ROOT_PASSWORD: root_dev_password
+      MYSQL_DATABASE: ecommerce_main
+      MYSQL_USER: ecommerce_user
+      MYSQL_PASSWORD: ecommerce_dev_password
+
+    ports:
+      - "127.0.0.1:3307:3306"
+
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+    networks:
+      - ecommerce_network
+
+    healthcheck:
+      test:
+        - CMD
+        - mysqladmin
+        - ping
+        - -h
+        - localhost
+        - -u
+        - root
+        - -proot_dev_password
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+
+  inventory-db:
+    image: postgres:16
+    container_name: ecommerce2026-inventory-db
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_DB: ecommerce_inventory
+      POSTGRES_USER: inventory_user
+      POSTGRES_PASSWORD: inventory_dev_password
+
+    ports:
+      - "127.0.0.1:5433:5432"
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+    networks:
+      - ecommerce_network
+
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U inventory_user -d ecommerce_inventory
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  app:
+    build:
+      context: ./main-app/laravel
+      dockerfile: Dockerfile
+    container_name: ecommerce2026-main-app
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8000:8000"
+    env_file:
+      - ./main-app/laravel/.env
+    environment:
+      DB_CONNECTION: mysql
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_DATABASE: ecommerce_main
+      DB_USERNAME: ecommerce_user
+      DB_PASSWORD: ecommerce_dev_password
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - ecommerce_network
+    volumes:
+      - ./main-app/laravel:/var/www
+      - laravel_vendor:/var/www/vendor
+
+  inventory-service:
+    build:
+      context: .
+      dockerfile: inventory-service/Dockerfile
+    container_name: ecommerce2026-inventory-service
+    restart: unless-stopped
+    environment:
+      DB_URL: jdbc:postgresql://inventory-db:5432/ecommerce_inventory
+      DB_USERNAME: inventory_user
+      DB_PASSWORD: inventory_dev_password
+    ports:
+      - "127.0.0.1:9090:9090"
+    depends_on:
+      inventory-db:
+        condition: service_healthy
+    networks:
+      - ecommerce_network
+
+
+volumes:
+  mysql_data:
+    name: ecommerce2026_mysql_data
+
+  postgres_data:
+    name: ecommerce2026_postgres_data
+
+  laravel_vendor:
+    name: ecommerce2026_laravel_vendor
+
+networks:
+  ecommerce_network:
+    name: ecommerce2026_network
+    driver: bridge
