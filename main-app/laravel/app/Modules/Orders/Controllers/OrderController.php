@@ -49,6 +49,22 @@ class OrderController extends Controller
         ]);
     }
 
+    public function cancel(Request $request, string $id): JsonResponse
+    {
+        $orderId = filter_var(ltrim($id, '0'), FILTER_VALIDATE_INT, [
+            'options' => ['min_range' => 1],
+        ]);
+        abort_if($orderId === false, 404);
+
+        $order = $this->orderService->cancelUserOrder($request->user(), $orderId);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Order cancelled successfully',
+            'data' => new OrderResource($order),
+        ]);
+    }
+
     public function updateStatus(
         UpdateOrderStatusRequest $request,
         int $id

@@ -129,8 +129,11 @@ Add the paths below to the base URL. Send `Accept: application/json` with each r
 | Change or remove a cart item | `PUT cart/items/{itemId}` or `DELETE cart/items/{itemId}` | Use the cart item ID from `data.items[].id`. Send `quantity` when changing it. |
 | Checkout | `POST orders` | Send an empty body. The response contains the new order and its ID in `data.id`. |
 | View orders | `GET orders` or `GET orders/{id}` | Use the order ID from checkout or the order list. |
+| Cancel an order | `POST orders/{id}/cancel` | Send an empty body with a customer token. The customer can cancel their own pending order. On `200`, read the cancelled order from `data`. |
 
 After signing in, send `Authorization: Bearer <token>` with cart, order, and session requests. If a protected request returns `401`, sign in again. The [frontend Postman collection](Ecommerce.Frontend.postman_collection.json) has examples for registration, logout, and admin requests.
+
+Show the cancellation action on pending orders. If cancellation is interrupted, refresh order details and retry the same request. Order details show `cancellation_pending: true` while the inventory release is awaiting confirmation. Once the order is cancelled, a repeat returns `200` with status `cancelled`.
 
 **Edit and delete products as an admin**
 

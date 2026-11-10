@@ -166,56 +166,80 @@ class OrderService
         }
     }
 
-   public function updateStatus(int $orderId, string $status): Order
-{
-    return DB::transaction(function () use ($orderId, $status) {
-
-        // Lock the order to prevent concurrent status updates.
-        $order = Order::query()
+    public function cancelUserOrder(User $user, int $orderId): Order
+    {
+        $lockedOrder = fn () => Order::query()
+            ->where('user_id', $user->id)
             ->lockForUpdate()
             ->findOrFail($orderId);
 
-        $allowedTransitions = [
-            'pending' => ['confirmed', 'cancelled'],
-            'confirmed' => ['processing', 'cancelled'],
-            'processing' => ['shipped', 'cancelled'],
-            'shipped' => ['delivered'],
-            'delivered' => [],
-            'cancelled' => [],
-        ];
+        // Persist the intent before releasing stock. If the RPC response is lost,
+        // retries can finish the cancellation while confirmation stays blocked.
+        DB::transaction(function () use ($lockedOrder) {
+            $order = $lockedOrder();
+            if (!in_array($order->status, ['pending', Order::CANCELLING, 'cancelled'], true)) {
+                throw ValidationException::withMessages([
+                    'status' => 'Only pending orders can be cancelled.',
+                ]);
+            }
 
-        if (!in_array($status, $allowedTransitions[$order->status] ?? [], true)) {
-            abort(422, 'Invalid order status transition.');
+            if ($order->status === 'pending') {
+                $this->reservationId($order);
+                $order->update(['status' => Order::CANCELLING]);
+            }
+        });
+
+        return DB::transaction(function () use ($lockedOrder) {
+            $order = $lockedOrder();
+
+            return $order->status === 'cancelled'
+                ? $order->load('items')
+                : $this->applyStatus($order, 'cancelled');
+        });
+    }
+
+    public function updateStatus(int $orderId, string $status): Order
+    {
+        return DB::transaction(function () use ($orderId, $status) {
+            $order = Order::query()->lockForUpdate()->findOrFail($orderId);
+
+            $allowedTransitions = [
+                'pending' => ['confirmed', 'cancelled'],
+                Order::CANCELLING => ['cancelled'],
+                'confirmed' => ['processing', 'cancelled'],
+                'processing' => ['shipped', 'cancelled'],
+                'shipped' => ['delivered'],
+                'delivered' => [],
+                'cancelled' => [],
+            ];
+
+            abort_unless(
+                in_array($status, $allowedTransitions[$order->status] ?? [], true),
+                422,
+                'Invalid order status transition.',
+            );
+
+            return $this->applyStatus($order, $status);
+        });
+    }
+
+    private function applyStatus(Order $order, string $status): Order
+    {
+        if ($status === 'shipped') {
+            $this->inventoryClient->commitReservation($this->reservationId($order));
+        } elseif ($status === 'cancelled') {
+            $this->inventoryClient->releaseStock($this->reservationId($order));
         }
 
-        // Inventory operations are required only for these transitions.
-        if (in_array($status, ['shipped', 'cancelled'], true)) {
-
-            if (!$order->reservation_id) {
-                abort(422, 'Order does not have an inventory reservation.');
-            }
-
-            if ($status === 'shipped') {
-                // Permanently deduct the reserved quantities from stock.
-                $this->inventoryClient->commitReservation(
-                    $order->reservation_id
-                );
-            }
-
-            if ($status === 'cancelled') {
-                // Release reserved quantities back to available stock.
-                $this->inventoryClient->releaseStock(
-                    $order->reservation_id
-                );
-            }
-        }
-
-        // Update the order only after the inventory operation succeeds.
-        $order->update([
-            'status' => $status,
-        ]);
+        $order->update(['status' => $status]);
 
         return $order->load('items');
-    });
-}
+    }
+
+    private function reservationId(Order $order): string
+    {
+        abort_if(!$order->reservation_id, 422, 'Order does not have an inventory reservation.');
+
+        return $order->reservation_id;
+    }
 }

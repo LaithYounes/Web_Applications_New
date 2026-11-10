@@ -9,6 +9,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Order extends Model
 {
+    public const CANCELLING = 'cancelling';
+
     protected $fillable = [
         'user_id',
         'status',
