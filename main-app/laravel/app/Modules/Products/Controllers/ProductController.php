@@ -4,6 +4,7 @@ namespace App\Modules\Products\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Modules\Products\Requests\StoreProductRequest;
+use App\Modules\Products\Requests\UpdateProductRequest;
 use App\Modules\Products\Resources\ProductResource;
 use App\Modules\Products\Services\ProductService;
 use Illuminate\Http\JsonResponse;
@@ -37,12 +38,7 @@ class ProductController extends Controller
 
     public function show(string $id): JsonResponse
     {
-        $id = filter_var(ltrim($id, '0'), FILTER_VALIDATE_INT, [
-            'options' => ['min_range' => 1],
-        ]);
-        abort_if($id === false, 404);
-
-        $product = $this->productService->findById($id);
+        $product = $this->productService->findById($this->productId($id));
 
         return response()->json([
             'success' => true,
@@ -66,5 +62,37 @@ class ProductController extends Controller
             'message' => 'Product created successfully',
             'data' => new ProductResource($product),
         ], 201);
+    }
+
+    public function update(UpdateProductRequest $request, string $id): JsonResponse
+    {
+        $product = $this->productService->update($this->productId($id), $request->validated());
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Product updated successfully',
+            'data' => new ProductResource($product),
+        ]);
+    }
+
+    public function destroy(string $id): JsonResponse
+    {
+        $this->productService->delete($this->productId($id));
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Product deleted successfully',
+            'data' => null,
+        ]);
+    }
+
+    private function productId(string $id): int
+    {
+        $id = filter_var(ltrim($id, '0'), FILTER_VALIDATE_INT, [
+            'options' => ['min_range' => 1],
+        ]);
+        abort_if($id === false, 404);
+
+        return $id;
     }
 }

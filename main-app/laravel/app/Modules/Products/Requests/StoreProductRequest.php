@@ -14,6 +14,14 @@ class StoreProductRequest extends FormRequest
     public function rules(): array
     {
         return [
+            ...$this->catalogRules(),
+            'initial_quantity' => ['required', 'integer', 'min:0', 'max:2147483647'],
+        ];
+    }
+
+    protected function catalogRules(): array
+    {
+        return [
             'category_id' => [
                 'required',
                 'integer',
@@ -28,7 +36,6 @@ class StoreProductRequest extends FormRequest
                 'mimes:jpg,jpeg,png,webp',
                 'max:5120',
             ],
-            'initial_quantity' => ['required', 'integer', 'min:0', 'max:2147483647'],
         ];
     }
 }

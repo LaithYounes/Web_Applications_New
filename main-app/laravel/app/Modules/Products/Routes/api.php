@@ -15,4 +15,6 @@ Route::get('/products/{id}', [ProductController::class, 'show'])
 Route::middleware(['auth:api', 'role:admin'])->group(function () {
     Route::post('/categories', [CategoryController::class, 'store']);
     Route::post('/products', [ProductController::class, 'store']);
+    Route::patch('/products/{id}', [ProductController::class, 'update'])->whereNumber('id');
+    Route::delete('/products/{id}', [ProductController::class, 'destroy'])->whereNumber('id');
 });

@@ -132,6 +132,16 @@ Add the paths below to the base URL. Send `Accept: application/json` with each r
 
 After signing in, send `Authorization: Bearer <token>` with cart, order, and session requests. If a protected request returns `401`, sign in again. The [frontend Postman collection](Ecommerce.Frontend.postman_collection.json) has examples for registration, logout, and admin requests.
 
+**Edit and delete products as an admin**
+
+| Action | Request | Body and response |
+| --- | --- | --- |
+| Edit product details | `PATCH products/{id}` | Send only the fields to change as JSON. Supported fields are `category_id`, `name`, `description`, and `price`. Send `description: null` to clear it. Returns `200` with the updated product in `data`. |
+| Replace the product image | `POST products/{id}` | Send multipart form data with `_method=PATCH` and an `image` file (JPEG, PNG, or WebP up to 5 MiB). Include any other fields to edit in the same request. Returns `200` with the updated product in `data`. |
+| Delete a product | `DELETE products/{id}` | Returns `200` with `data: null`. The product disappears from the catalog and carts. Existing orders and their reservations are preserved. |
+
+Use an admin bearer token for each request. Deleted and unpublished products return `404`. Field validation errors return `422`. Read available stock through `GET products/{id}`.
+
 **Product images in the emulator**
 
 A catalog image URL can start with `http://localhost:8000`. In the debug app, replace that part with `http://10.0.2.2:8000` and keep the rest of the URL. A cart item's image comes as a path such as `products/example.png`. Add `http://10.0.2.2:8000/storage/` before that path. The API returns prices and totals as strings such as `"25.00"`.
@@ -139,7 +149,8 @@ A catalog image URL can start with `http://localhost:8000`. In the debug app, re
 ## After the first run
 
 - **Start the backend** from the project folder with `docker compose up -d --wait`.
-- **Get backend updates** with `git pull --ff-only`, then run `docker compose up -d --build --wait`. If `main-app/laravel/composer.lock` changed, run `docker compose exec -T app composer install --no-interaction --prefer-dist`. Then run `docker compose exec -T app php artisan migrate --force`.
+- **Get Laravel code updates** with `git pull --ff-only`. Start stopped services with `docker compose up -d --no-build --wait`, run `docker compose exec -T app php artisan migrate --force`, and reload the Laravel server with `docker compose restart app`.
+- **Get updates that change Docker images or the inventory service** with `git pull --ff-only`, then run `docker compose up -d --build --wait`. If `main-app/laravel/composer.lock` changed, run `docker compose exec -T app composer install --no-interaction --prefer-dist`. Then run `docker compose exec -T app php artisan migrate --force`.
 - **Stop the backend** with `docker compose stop`. Your demo data stays saved.
 - **If the API does not respond**, run `docker compose ps` and `docker compose logs --tail 50 app inventory-service`. If the API works from PowerShell, open `/api/v1/health` in the emulator's browser before checking the app code.
 - **If checkout returns `503`**, check the order list and cart before trying again. If it keeps happening, share the error and the output of `docker compose logs --tail 50 inventory-service` with the backend team.

@@ -15,7 +15,11 @@ class AddCartItemRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'product_id' => ['required', 'integer', Rule::exists('products', 'id')->whereNull('pending_initial_quantity')],
+            'product_id' => [
+                'required',
+                'integer',
+                Rule::exists('products', 'id')->whereNull('pending_initial_quantity')->withoutTrashed(),
+            ],
             'quantity' => ['required', 'integer', 'min:1', 'max:1000'],
         ];
     }

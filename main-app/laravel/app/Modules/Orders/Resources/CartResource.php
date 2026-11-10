@@ -9,9 +9,11 @@ class CartResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
+        $items = $this->items->filter(fn ($item) => $item->product !== null)->values();
+
         return [
             'id' => $this->id,
-            'items' => $this->items->map(function ($item) {
+            'items' => $items->map(function ($item) {
                 return [
                     'id' => $item->id,
                     'product' => [
@@ -30,7 +32,7 @@ class CartResource extends JsonResource
                 ];
             }),
             'total_amount' => number_format(
-                $this->items->sum(
+                $items->sum(
                     fn ($item) => (float) $item->product->price * $item->quantity
                 ),
                 2,

@@ -94,10 +94,12 @@ class DemoCatalogSeeder extends Seeder
 
             foreach ($entry['products'] as $identifier => [$name, $description, $price, $stock]) {
                 $key = self::creationKey($identifier);
-                $product = Product::where('creation_key', $key)->first();
+                $product = Product::withTrashed()->where('creation_key', $key)->first();
 
                 if ($product !== null) {
-                    $products->finishInitialStock($product);
+                    if (!$product->trashed()) {
+                        $products->finishInitialStock($product);
+                    }
 
                     continue;
                 }

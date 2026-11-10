@@ -7,6 +7,8 @@ use App\Modules\Inventory\Services\InventoryGrpcClient;
 use App\Modules\Products\Models\Product;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use RuntimeException;
 use Throwable;
@@ -57,16 +59,13 @@ class ProductService
                 hash_file('sha256', $image->getPathname()),
             ], JSON_THROW_ON_ERROR));
 
-            $product = Product::where('creation_key', $creationKey)->first();
+            $product = Product::withTrashed()->where('creation_key', $creationKey)->first();
             if ($product !== null) {
                 return $this->completeCreation($product, $fingerprint);
             }
         }
 
-        $imagePath = $image->store('products', 'public');
-        if (!is_string($imagePath) || $imagePath === '') {
-            throw new RuntimeException('The product image could not be saved.');
-        }
+        $imagePath = $this->storeImage($image);
 
         $attributes = [
             ...$data,
@@ -78,7 +77,7 @@ class ProductService
         try {
             $product = $creationKey === null
                 ? Product::create($attributes)
-                : Product::createOrFirst(['creation_key' => $creationKey], $attributes);
+                : Product::withTrashed()->createOrFirst(['creation_key' => $creationKey], $attributes);
         } catch (Throwable $exception) {
             Storage::disk('public')->delete($imagePath);
             throw $exception;
@@ -91,8 +90,76 @@ class ProductService
         return $this->completeCreation($product, $fingerprint);
     }
 
+    public function update(int $id, array $data): Product
+    {
+        $newImagePath = null;
+
+        try {
+            [$product, $oldImagePath] = DB::transaction(function () use ($id, $data, &$newImagePath) {
+                $product = Product::published()->lockForUpdate()->findOrFail($id);
+                $oldImagePath = $product->image_path;
+
+                if (isset($data['image'])) {
+                    $newImagePath = $this->storeImage($data['image']);
+                    $data['image_path'] = $newImagePath;
+                    unset($data['image']);
+                }
+
+                $product->update($data);
+
+                return [$product->load('category'), $oldImagePath];
+            });
+        } catch (Throwable $exception) {
+            if ($newImagePath !== null) {
+                $this->deleteUnusedImage($newImagePath);
+            }
+
+            throw $exception;
+        }
+
+        if ($newImagePath !== null && $newImagePath !== $oldImagePath) {
+            $this->deleteUnusedImage($oldImagePath);
+        }
+
+        return $product;
+    }
+
+    public function delete(int $id): void
+    {
+        $imagePath = DB::transaction(function () use ($id) {
+            $product = Product::published()->lockForUpdate()->findOrFail($id);
+            $product->delete();
+
+            return $product->image_path;
+        });
+
+        $this->deleteUnusedImage($imagePath);
+    }
+
+    private function storeImage(UploadedFile $image): string
+    {
+        $path = $image->store('products', 'public');
+        if (!is_string($path) || $path === '') {
+            throw new RuntimeException('The product image could not be saved.');
+        }
+
+        return $path;
+    }
+
+    private function deleteUnusedImage(string $path): void
+    {
+        try {
+            if (!Product::where('image_path', $path)->exists() && !Storage::disk('public')->delete($path)) {
+                Log::warning('Could not remove product image.', ['path' => $path]);
+            }
+        } catch (Throwable $exception) {
+            report($exception);
+        }
+    }
+
     private function completeCreation(Product $product, ?string $fingerprint): Product
     {
+        abort_if($product->trashed(), 409, 'Idempotency key already used for a deleted product.');
         abort_if($product->creation_fingerprint !== $fingerprint, 409, 'Idempotency key already used for a different product.');
 
         $this->finishInitialStock($product);

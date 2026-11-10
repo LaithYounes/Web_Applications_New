@@ -68,7 +68,8 @@ class OrderService
                 }
 
                 $cartItems = $cart->items()
-                    ->with('product')
+                    // Keep products available until the order and its inventory reservation are saved.
+                    ->with(['product' => fn ($products) => $products->sharedLock()])
                     ->lockForUpdate()
                     ->get();
 

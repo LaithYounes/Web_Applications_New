@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Ecommerce API - Frontend Handoff",
-    "description": "This collection provides runnable REST requests and saved Laravel responses for frontend integration. Tokens in saved examples are placeholders.\n\n## Getting started\n\n1. Import the collection and set baseUrl. The default is http://localhost:8000 on the Docker host.\n2. Check API health, then register a customer or sign in with a seeded account. Sign-in saves tokens by role. Test logout after finishing the other session requests.\n3. Connect categories and products, then the cart, checkout, and order details. Use IDs returned by the API in Postman variables.\n4. Use an admin token for admin requests. If Postman asks for an image file, select main-app/laravel/database/seeders/fixtures/phone.png from the project root.\n\nSeeded accounts are available after running the command below from the project root with the services running and migrations applied. To give the first registered customer ID 1, register them before seeding.\n\n~~~powershell\ndocker compose exec -e INVENTORY_GRPC_TIMEOUT=10000000 app php artisan db:seed\n~~~\n\n## Response contract\n\n- Send Accept: application/json. For JSON bodies, send Content-Type: application/json. Protected endpoints use Authorization: Bearer <token>.\n- Successful responses include success, message, and data. Paginated responses add links and meta. Follow links.next when present. An empty page returns an empty data array.\n- Errors return success set to false, a message, and data set to null. Validation errors map each field in errors to a list of messages. Other errors can return errors set to null.\n- Amounts such as price, total_amount, unit_price, and subtotal are decimal strings. Quantities and IDs are integers. created_at is an ISO 8601 timestamp.\n- Catalog images are absolute URLs. Cart image paths are relative to /storage/. Set Laravel's APP_URL to a URL the browser can reach.\n\n| HTTP | Frontend handling |\n| --- | --- |\n| 200 and 201 | Render data and update local state |\n| 401 | Check credentials on login. Sign in again for protected requests |\n| 403 | Show the required permission |\n| 404 | Show that the resource is unavailable |\n| 409 | Refresh stock and the cart after a checkout conflict. For product creation, check the key and request data |\n| 422 | Show field errors or the general message for cases such as a rejected order transition |\n| 429 | Ask the user to wait before another login attempt |\n| 500 and 503 | Show a temporary error. After a checkout failure, check the order list and cart before retrying |\n\n## Browser integration\n\nThe local Docker setup was tested with a preflight from http://localhost:5173 using Authorization, Content-Type, and Idempotency-Key. Check CORS settings when the frontend origin or deployment changes. Cross-origin JavaScript needs Retry-After exposed to read it.\n\nThe API covers authentication, the catalog, the cart, checkout, and order management. The server manages inventory, and order details expose the current status.\n\nCheckout creates an order and reserves stock. Payments, notifications, product editing and deletion, and admin restocking require additional endpoints.",
+    "description": "This collection provides runnable REST requests and saved Laravel responses for frontend integration. Tokens in saved examples are placeholders.\n\n## Getting started\n\n1. Import the collection and set baseUrl. The default is http://localhost:8000 on the Docker host.\n2. Check API health, then register a customer or sign in with a seeded account. Sign-in saves tokens by role. Test logout after finishing the other session requests.\n3. Connect categories and products, then the cart, checkout, and order details. Use IDs returned by the API in Postman variables.\n4. Use an admin token for admin requests. If Postman asks for an image file, select main-app/laravel/database/seeders/fixtures/phone.png from the project root.\n\nSeeded accounts are available after running the command below from the project root with the services running and migrations applied. To give the first registered customer ID 1, register them before seeding.\n\n~~~powershell\ndocker compose exec -e INVENTORY_GRPC_TIMEOUT=10000000 app php artisan db:seed\n~~~\n\n## Response contract\n\n- Send Accept: application/json. For JSON bodies, send Content-Type: application/json. Protected endpoints use Authorization: Bearer <token>.\n- Successful responses include success, message, and data. Paginated responses add links and meta. Follow links.next when present. An empty page returns an empty data array.\n- Errors return success set to false, a message, and data set to null. Validation errors map each field in errors to a list of messages. Other errors can return errors set to null.\n- Amounts such as price, total_amount, unit_price, and subtotal are decimal strings. Quantities and IDs are integers. created_at is an ISO 8601 timestamp.\n- Catalog images are absolute URLs. Cart image paths are relative to /storage/. Set Laravel's APP_URL to a URL the browser can reach.\n\n| HTTP | Frontend handling |\n| --- | --- |\n| 200 and 201 | Render data and update local state |\n| 401 | Check credentials on login. Sign in again for protected requests |\n| 403 | Show the required permission |\n| 404 | Show that the resource is unavailable |\n| 409 | Refresh stock and the cart after a checkout conflict. For product creation, check the key and request data |\n| 422 | Show field errors or the general message for cases such as a rejected order transition |\n| 429 | Ask the user to wait before another login attempt |\n| 500 and 503 | Show a temporary error. After a checkout failure, check the order list and cart before retrying |\n\n## Browser integration\n\nThe local Docker setup was tested with a preflight from http://localhost:5173 using Authorization, Content-Type, and Idempotency-Key. Check CORS settings when the frontend origin or deployment changes. Cross-origin JavaScript needs Retry-After exposed to read it.\n\nThe API covers authentication, the catalog, admin product management, the cart, checkout, and order management. The server manages inventory, and order details expose the current status.\n\nCheckout creates an order and reserves stock. Payments, notifications, and admin restocking require additional endpoints.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -72,6 +72,12 @@
       "key": "productId",
       "value": "1",
       "description": "Product ID from the catalog or the product creation response.",
+      "type": "string"
+    },
+    {
+      "key": "adminProductId",
+      "value": "",
+      "description": "Product ID saved by Create product with image. Use a disposable product when testing edits and deletion.",
       "type": "string"
     },
     {
@@ -2943,7 +2949,7 @@
     },
     {
       "name": "05 Admin",
-      "description": "Use adminToken from admin login. A 403 means the role lacks permission. A 401 means the token is missing or invalid.\nThis folder covers category and product creation and order management. Follow the allowed transitions in Update order status.",
+      "description": "Use adminToken from admin login. A 403 means the role lacks permission. A 401 means the token is missing or invalid.\nCreate a disposable product with a fresh productCreationKey before trying product edits or deletion. The create request saves adminProductId for those requests.\nFollow the allowed transitions in Update order status.",
       "item": [
         {
           "name": "Check product stock",
@@ -3430,7 +3436,7 @@
                 }
               ]
             },
-            "description": "Send multipart/form-data with category_id for an existing category, name up to 255 characters, price from 0.01 to 99999999.99 with at most two decimal places, initial_quantity as an integer from 0 to 2147483647, and image as a file. description is optional.\nAccepted images are JPG, JPEG, PNG, and WebP up to 5 MiB. In a browser, use FormData and let the browser set Content-Type and its boundary.\nA 201 response returns the product and image URL. Read product details for available_quantity. A 422 response includes field errors such as errors.image.\nIdempotency-Key can be up to 255 characters. Use a new key for each new product, and reuse the same key, fields, and file when retrying that creation. A change in the payload with the same key returns 409. A 503 can leave a product pending initialization. Retry with the same key to finish.\nIn Postman, change productCreationKey when creating a different product and select the image fixture if prompted."
+            "description": "Send multipart/form-data with category_id for an existing category, name up to 255 characters, price from 0.01 to 99999999.99 with at most two decimal places, initial_quantity as an integer from 0 to 2147483647, and image as a file. description is optional.\nAccepted images are JPG, JPEG, PNG, and WebP up to 5 MiB. In a browser, use FormData and let the browser set Content-Type and its boundary.\nA 201 response returns the product and image URL. Read product details for available_quantity. A 422 response includes field errors such as errors.image.\nIdempotency-Key can be up to 255 characters. Use a new key for each new product, and reuse the same key, fields, and file when retrying that creation. A change in the payload with the same key returns 409. A 503 can leave a product pending initialization. Retry with the same key to finish.\nIn Postman, change productCreationKey when creating a different product and select the image fixture if prompted.\nThe create request saves the returned ID in adminProductId for the edit and delete requests."
           },
           "response": [
             {
@@ -3931,10 +3937,417 @@
                 "type": "text/javascript",
                 "exec": [
                   "if (pm.response.code === 201) {",
-                  "    pm.collectionVariables.set(\"productId\", pm.response.json().data.id);",
+                  "    const productId = pm.response.json().data.id;",
+                  "    pm.collectionVariables.set(\"productId\", productId);",
+                  "    pm.collectionVariables.set(\"adminProductId\", productId);",
                   "}"
                 ]
               }
+            }
+          ]
+        },
+        {
+          "name": "Edit product details",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/products/{{adminProductId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "products",
+                "{{adminProductId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"category_id\": {{categoryId}},\n  \"name\": \"Samsung Galaxy S24 (Updated)\",\n  \"description\": null,\n  \"price\": \"579.00\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Send only the fields you want to change. Use null to clear description. The category_id must exist, name accepts up to 255 characters, and price must be from 0.01 to 99999999.99 with at most two decimal places.\nA 200 response contains the updated product. Stock is managed separately. A 422 response contains field validation errors. A missing, deleted, or unpublished product returns 404."
+          },
+          "response": [
+            {
+              "name": "200 Product updated",
+              "originalRequest": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{adminToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/products/{{adminProductId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "products",
+                    "{{adminProductId}}"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"category_id\": {{categoryId}},\n  \"name\": \"Samsung Galaxy S24 (Updated)\",\n  \"description\": null,\n  \"price\": \"579.00\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Product updated successfully\",\n  \"data\": {\n    \"id\": 16,\n    \"name\": \"Samsung Galaxy S24 (Updated)\",\n    \"description\": null,\n    \"price\": \"579.00\",\n    \"image\": \"http://localhost:8000/storage/products/ZlV8YZFq3EuYl2mu8xCGQNdWPnjBlSH2NQi6k1nu.png\",\n    \"category\": {\n      \"id\": 6,\n      \"name\": \"Phone Accessories\",\n      \"description\": \"Accessories for charging and everyday use.\"\n    },\n    \"created_at\": \"2026-11-09T02:47:53.000000Z\"\n  }\n}"
+            },
+            {
+              "name": "422 Invalid product fields",
+              "originalRequest": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{adminToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/products/{{adminProductId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "products",
+                    "{{adminProductId}}"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"price\": \"0.00\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Unprocessable Content",
+              "code": 422,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": false,\n  \"message\": \"The provided data is invalid.\",\n  \"data\": null,\n  \"errors\": {\n    \"price\": [\n      \"The price field must be at least 0.01.\"\n    ]\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Replace product image",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/products/{{adminProductId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "products",
+                "{{adminProductId}}"
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "_method",
+                  "value": "PATCH",
+                  "type": "text"
+                },
+                {
+                  "key": "image",
+                  "type": "file",
+                  "src": "postman/fixtures/product.png"
+                }
+              ]
+            },
+            "description": "Send multipart form data with _method=PATCH and the image file. Select postman/fixtures/product.png if prompted. Accepted images are JPEG, PNG, and WebP up to 5 MiB.\nYou can include category_id, name, description, or price in the same request. Let the client set Content-Type and the multipart boundary. Read the new image URL from data.image."
+          },
+          "response": [
+            {
+              "name": "200 Product image replaced",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{adminToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/products/{{adminProductId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "products",
+                    "{{adminProductId}}"
+                  ]
+                },
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "_method",
+                      "value": "PATCH",
+                      "type": "text"
+                    },
+                    {
+                      "key": "image",
+                      "type": "file",
+                      "src": "postman/fixtures/product.png"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Product updated successfully\",\n  \"data\": {\n    \"id\": 16,\n    \"name\": \"Samsung Galaxy S24 (Updated)\",\n    \"description\": null,\n    \"price\": \"579.00\",\n    \"image\": \"http://localhost:8000/storage/products/9eY4VUvyNTBtQ0Sh14mKezqccVdh5IY0t6cp42zL.png\",\n    \"category\": {\n      \"id\": 6,\n      \"name\": \"Phone Accessories\",\n      \"description\": \"Accessories for charging and everyday use.\"\n    },\n    \"created_at\": \"2026-11-09T02:47:53.000000Z\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Delete product",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/products/{{adminProductId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "products",
+                "{{adminProductId}}"
+              ]
+            },
+            "description": "Use the adminProductId from a disposable product. A 200 response returns data set to null. The product disappears from the catalog and carts while existing order history and reservations are preserved.\nRefresh the catalog after success. A repeated delete, or a missing or unpublished product, returns 404."
+          },
+          "response": [
+            {
+              "name": "200 Product deleted",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{adminToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/products/{{adminProductId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "products",
+                    "{{adminProductId}}"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Product deleted successfully\",\n  \"data\": null\n}"
+            },
+            {
+              "name": "404 Product unavailable",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{adminToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/products/{{adminProductId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "products",
+                    "{{adminProductId}}"
+                  ]
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": false,\n  \"message\": \"The requested resource was not found.\",\n  \"data\": null,\n  \"errors\": null\n}"
             }
           ]
         },
