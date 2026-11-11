@@ -14,7 +14,7 @@ cd Web_Applications_New
 docker compose version
 ```
 
-If you already cloned the project, open PowerShell in the project folder and run `git pull --ff-only`. Run the backend commands below from the same folder, where `docker-compose.yml` is located.
+If you already completed setup and have `update.cmd`, open PowerShell in the project folder and run `.\update.cmd`. Run the first-time setup below only for a new installation. If your older clone does not have the updater yet, see [upgrading an existing local checkout](docs/checkout-recovery.md#upgrading-an-existing-local-checkout).
 
 ## 2. Set up the backend for the first time
 
@@ -152,8 +152,7 @@ A catalog image URL can start with `http://localhost:8000`. In the debug app, re
 ## After the first run
 
 - **Start the backend** from the project folder with `docker compose up -d --wait`.
-- **Get backend updates** using the [ordered upgrade steps](docs/checkout-recovery.md#upgrading-an-existing-local-checkout). This release changes Laravel, inventory, database tables, and the recovery service: stop the application before pulling, rebuild, start inventory, apply migrations, then start the application and recovery service.
-- **If `main-app/laravel/composer.lock` changed**, refresh the shared dependency volume with `docker compose run --rm --no-deps -T app composer install --no-interaction --prefer-dist` before running migrations in those upgrade steps.
+- **Get and apply backend updates** with `.\update.cmd`. It downloads the latest code, rebuilds the images, refreshes PHP dependencies, applies migrations, and restarts the application and recovery service. Docker Desktop must be running; preserve local code changes first. Existing data and local `.env` settings are kept. See the [updater details and first-use command for older clones](docs/checkout-recovery.md#upgrading-an-existing-local-checkout).
 - **Stop the backend** with `docker compose stop`. Your demo data stays saved.
 - **If the API does not respond**, run `docker compose ps` and `docker compose logs --tail 50 app inventory-service`. If the API works from PowerShell, open `/api/v1/health` in the emulator's browser before checking the app code.
 - **If checkout returns `503`**, check the order list and cart before trying again. If it keeps happening, share the error and the output of `docker compose logs --tail 50 inventory-service` with the backend team.

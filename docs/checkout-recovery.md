@@ -51,28 +51,27 @@ Monitor pending intent count and age together with recovery errors. A continuous
 
 ## Upgrading an existing local checkout
 
-Run from the repository root, with Docker Desktop running. Commit or otherwise preserve any local work before pulling. These commands keep application traffic and the old scheduler stopped while the new schema is installed.
+After first-time setup, run this one command from PowerShell in the repository root, with Docker Desktop running:
 
 ```powershell
-docker compose stop
-git pull --ff-only
-docker compose build
-docker compose up -d --no-build --wait mysql inventory-db inventory-service
-docker compose logs -f --tail 50 inventory-service
+.\update.cmd
 ```
 
-Wait for `gRPC Server started`, then press `Ctrl+C` to leave the log stream. If `composer.lock` changed, first run `docker compose run --rm --no-deps -T app composer install --no-interaction --prefer-dist`. Continue with:
+For an older clone that does not have `update.cmd` yet, use this single line once to obtain and run the updater:
 
 ```powershell
-docker compose run --rm --no-deps -T app php artisan migrate --force
-docker compose up -d --no-build app checkout-recovery
-docker compose exec -T app php artisan schedule:list
-(Invoke-RestMethod 'http://localhost:8000/api/v1/health').data.status
+docker compose stop; if ($LASTEXITCODE -eq 0) { git pull --ff-only; if ($LASTEXITCODE -eq 0) { .\update.cmd -SkipPull } }
 ```
 
-Run each command only after the previous step succeeds. Inventory's replay support must be deployed before checkout recovery begins. Both new migrations must succeed before serving the updated application or starting its scheduler. `git pull` alone does not rebuild the inventory image or install database changes. Keep existing database volumes; no reset or reseed is required for this upgrade.
+Preserve local work before updating. The regular updater refuses local modifications and unpublished/divergent commits before stopping services. The first-use line relies on Git's normal fast-forward checks; resolve local modifications before using it too. `-SkipPull` applies the code already downloaded, and is useful for retrying a failed installation without another pull.
+
+The updater stops services before changing application files, pulls with `--ff-only`, builds both images, starts the databases and inventory, refreshes the persistent Composer vendor volume, clears cached configuration, and waits for a real read-only inventory RPC. It then applies migrations before starting the application/recovery service, checks HTTP health and running services, and lists the schedule. Every failed native command stops the remaining steps and returns a nonzero exit code; fix the displayed error and rerun the same command. A failure before application startup leaves it stopped rather than serving a partially installed update.
+
+Inventory's replay support must be deployed before checkout recovery begins. Both new migrations must succeed before serving the updated application or starting its scheduler. `git pull` alone downloads files; the updater also installs their runtime/database changes. Database volumes, local `.env`, and application keys are kept, without reset or reseeding. This command updates an existing installation; use the README's first-time setup for a fresh clone.
 
 ## Verification
+
+The Windows updater has 12 isolated command-flow scenarios covering successful ordering, applying downloaded code, local modifications, divergent commits, fetch/pull/build/Composer/RPC/migration failures, HTTP readiness failure, and a missing recovery worker. Run `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/tests/update.Tests.ps1`. These tests mock Git/Docker/HTTP and do not rebuild images or change application databases. The actual read-only inventory probe and HTTP health check were also verified through Windows PowerShell 5.1; the batch wrapper's failure exit code was checked from a path containing spaces.
 
 The Laravel regression suite, including checkout recovery and status history, passed with **62 tests and 527 assertions**. Run it using `docker compose exec -T app php artisan test --compact`; its test configuration uses in-memory SQLite and mocked RPCs.
 
