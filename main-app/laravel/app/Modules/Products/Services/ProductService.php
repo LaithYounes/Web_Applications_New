@@ -5,6 +5,7 @@ namespace App\Modules\Products\Services;
 use App\Modules\Inventory\Exceptions\InventoryServiceException;
 use App\Modules\Inventory\Services\InventoryGrpcClient;
 use App\Modules\Products\Models\Product;
+use App\Support\Performance\CatalogCache;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -14,12 +15,15 @@ use Throwable;
 class ProductService
 {
     public function __construct(
-        private InventoryGrpcClient $inventoryClient
+        private InventoryGrpcClient $inventoryClient,
+        private CatalogCache $catalogCache,
     ) {}
 
     public function getAll(?int $categoryId, int $perPage = 12): LengthAwarePaginator
     {
-        return Product::query()
+        $page = max(1, (int) request()->input('page', 1));
+
+        $resolve = fn (): LengthAwarePaginator => Product::query()
             ->published()
             ->with('category')
             ->when($categoryId, function ($query) use ($categoryId) {
@@ -28,12 +32,21 @@ class ProductService
             ->latest()
             ->orderByDesc('id')
             ->paginate($perPage);
+
+        if (! config('perf.catalog_cache_enabled')) {
+            return $resolve();
+        }
+
+        return $this->catalogCache->productsList($categoryId, $perPage, $page, $resolve);
     }
 
     public function findById(int $id): Product
     {
         $product = Product::published()->with('category')->findOrFail($id);
-        $product->available_quantity = $this->inventoryClient->getStock($product->id);
+        $product->setAttribute(
+            'available_quantity',
+            $this->inventoryClient->getStock($product->id)
+        );
 
         return $product;
     }
@@ -88,7 +101,10 @@ class ProductService
             Storage::disk('public')->delete($imagePath);
         }
 
-        return $this->completeCreation($product, $fingerprint);
+        $created = $this->completeCreation($product, $fingerprint);
+        $this->catalogCache->invalidate();
+
+        return $created;
     }
 
     private function completeCreation(Product $product, ?string $fingerprint): Product
@@ -115,5 +131,6 @@ class ProductService
         );
 
         $product->update(['pending_initial_quantity' => null]);
+        $this->catalogCache->invalidate();
     }
 }

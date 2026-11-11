@@ -11,7 +11,8 @@
         "grpc/grpc": "^1.85",
         "laravel/framework": "^12.0",
         "laravel/tinker": "^2.10.1",
-        "php-open-source-saver/jwt-auth": "^2.10"
+        "php-open-source-saver/jwt-auth": "^2.10",
+        "predis/predis": "^2.0"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",

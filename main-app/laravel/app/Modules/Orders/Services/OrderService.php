@@ -22,7 +22,8 @@ class OrderService
 
     public function getUserOrders(User $user): LengthAwarePaginator
     {
-        return Order::query()
+        // Cross-request read-your-writes: never serve user orders from a lagged replica.
+        return $this->ordersQuery()
             ->where('user_id', $user->id)
             ->with('items')
             ->latest()
@@ -31,7 +32,7 @@ class OrderService
 
     public function getAllOrders(): LengthAwarePaginator
     {
-        return Order::query()
+        return $this->ordersQuery()
             ->with(['user', 'items'])
             ->latest()
             ->paginate(15);
@@ -39,10 +40,20 @@ class OrderService
 
     public function getUserOrder(User $user, int $orderId): Order
     {
-        return Order::query()
+        return $this->ordersQuery()
             ->where('user_id', $user->id)
             ->with('items')
             ->findOrFail($orderId);
+    }
+
+    private function ordersQuery()
+    {
+        $query = Order::query();
+        if (config('perf.orders_use_primary', true)) {
+            $query->useWritePdo();
+        }
+
+        return $query;
     }
 
     public function createOrder(User $user): Order

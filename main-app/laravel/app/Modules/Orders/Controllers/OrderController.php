@@ -33,8 +33,11 @@ class OrderController extends Controller
     public function show(Request $request, int $id): JsonResponse
     {
         if ($request->user()->role === 'admin') {
-            $order = \App\Modules\Orders\Models\Order::with('items')
-                ->findOrFail($id);
+            $orderQuery = \App\Modules\Orders\Models\Order::query();
+            if (config('perf.orders_use_primary', true)) {
+                $orderQuery->useWritePdo();
+            }
+            $order = $orderQuery->with('items')->findOrFail($id);
         } else {
             $order = $this->orderService->getUserOrder(
                 $request->user(),

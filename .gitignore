@@ -1,12 +1,17 @@
 .env
 .env.*
 !.env.example
+!.env.perf.example
 auth.json
 *.sqlite*
 *.log
 vendor/
 node_modules/
 target/
+docs/performance/baselines/
+docs/performance/artifacts/
+/backups/
+!/backups/README.md
 .phpunit.result.cache
 /main-app/laravel/public/storage
 /main-app/laravel/storage/*.key

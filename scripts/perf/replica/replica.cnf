@@ -1,0 +1,11 @@
+[mysqld]
+# Replica for ecommerce2026-perf only.
+server-id = 2
+log_bin = mysql-bin
+binlog_format = ROW
+relay_log = relay-bin
+read_only = ON
+super_read_only = ON
+gtid_mode = OFF
+enforce_gtid_consistency = OFF
+skip_replica_start = ON
