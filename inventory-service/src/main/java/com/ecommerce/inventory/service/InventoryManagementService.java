@@ -95,10 +95,21 @@ public class InventoryManagementService {
 
         validateReservationRequest(reservationId, requestedItems);
 
-        if (reservationRepository.existsByReservationId(reservationId)) {
-            throw new ReservationAlreadyExistsException(
-                    "Reservation ID already exists."
-            );
+        reservationRepository.lockReservationId(reservationId);
+        List<InventoryReservation> existing = reservationRepository.findByReservationId(reservationId);
+        if (!existing.isEmpty()) {
+            boolean sameActiveReservation = existing.size() == requestedItems.size()
+                    && existing.stream().allMatch(reservation ->
+                        reservation.getStatus() == ReservationStatus.ACTIVE
+                        && reservation.getQuantity().equals(requestedItems.get(reservation.getProductId()))
+                    );
+            if (!sameActiveReservation) {
+                throw new ReservationAlreadyExistsException(
+                        "Reservation ID already used for different items or a finalized reservation."
+                );
+            }
+            // A lost acknowledgement is safe to retry, including for the last unit.
+            return;
         }
 
         // Sort product IDs to acquire locks in a consistent order
@@ -162,6 +173,8 @@ public boolean commitReservation(String reservationId) {
     if (reservationId == null || reservationId.isBlank()) {
         throw new IllegalArgumentException("Invalid reservation ID.");
     }
+
+    reservationRepository.lockReservationId(reservationId);
 
     List<InventoryReservation> existingReservations =
             reservationRepository.findByReservationId(reservationId);
@@ -280,6 +293,8 @@ public boolean releaseStock(String reservationId) {
     if (reservationId == null || reservationId.isBlank()) {
         throw new IllegalArgumentException("Invalid reservation ID.");
     }
+
+    reservationRepository.lockReservationId(reservationId);
 
     List<InventoryReservation> existingReservations =
             reservationRepository.findByReservationId(reservationId);

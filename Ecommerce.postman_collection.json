@@ -5886,8 +5886,8 @@
       ]
     },
     {
-      "name": "08 gRPC Deadline - Known Bug",
-      "description": "Reproduce this known issue on a test database. Start after 06 with inventory online. If you ran 07, drop the MySQL trigger first. The stock recovery test asserts the expected behavior and can fail if the reservation remains active.",
+      "name": "08 gRPC Deadline - Durable Checkout Recovery",
+      "description": "Run only on disposable test databases after 06 with inventory online. Drop the MySQL trigger from 07 first. For deterministic manual steps, stop checkout-recovery temporarily; restart it after this scenario. A timeout preserves a durable checkout intent. Retrying resumes the original reservation instead of reserving twice.",
       "item": [
         {
           "name": "Checkout when reservation exceeds the deadline",
@@ -5943,7 +5943,7 @@
           "response": []
         },
         {
-          "name": "Verify the deadline created no order",
+          "name": "Verify checkout is pending and the cart is preserved",
           "event": [
             {
               "listen": "test",
@@ -5951,19 +5951,62 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
-                  "let payload;",
-                  "pm.test(\"Response is JSON\", () => { payload = pm.response.json(); });",
-                  "if (payload && pm.response.code === 200) {",
-                  "    const data = payload.data;",
-                  "    pm.test(\"Success flag and message\", () => pm.expect(payload).to.include({success: true}).and.have.property(\"message\").that.is.a(\"string\"));",
-                  "    pm.test(\"No order was created\", () => pm.expect(data).to.be.an(\"array\").and.be.empty);",
-                  "}"
+                  "const data = pm.response.json().data;",
+                  "pm.test(\"Durable checkout is pending\", () => pm.expect(data.checkout_pending).to.eql(true));",
+                  "pm.test(\"Cart remains intact\", () => pm.expect(data.items).to.be.an(\"array\").and.not.be.empty);"
                 ]
               }
             }
           ],
           "request": {
             "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customerCToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/cart",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "cart"
+              ]
+            },
+            "description": "After the timeout, the cart remains intact with checkout_pending=true. A recovery worker may finish it automatically, so stop checkout-recovery during this manual scenario."
+          },
+          "response": []
+        },
+        {
+          "name": "Retry the original checkout safely",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", () => pm.response.to.have.status(201));",
+                  "pm.test(\"Checkout completed\", () => pm.expect(pm.response.json()).to.include({success: true}));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -5991,12 +6034,12 @@
                 "orders"
               ]
             },
-            "description": "The order should be absent from customer C's order list after the 503 response."
+            "description": "First remove the PostgreSQL delay trigger after the original call has settled:\n\nDROP TRIGGER IF EXISTS postman_delay_reservation ON inventory_reservations;\nDROP FUNCTION IF EXISTS postman_delay_reservation();\n\nRetry POST orders. The same stored reservation ID and basket are resumed. Expect exactly one order. Do not manually release its reservation."
           },
           "response": []
         },
         {
-          "name": "Verify stock was not leaked after the deadline",
+          "name": "Verify one reservation backs the recovered order",
           "event": [
             {
               "listen": "test",
@@ -6009,7 +6052,7 @@
                   "if (payload && pm.response.code === 200) {",
                   "    const data = payload.data;",
                   "    pm.test(\"Success flag and message\", () => pm.expect(payload).to.include({success: true}).and.have.property(\"message\").that.is.a(\"string\"));",
-                  "    pm.test(\"Available stock is 2\", () => pm.expect(data.available_quantity).to.eql(2));",
+                  "    pm.test(\"Available stock is 1\", () => pm.expect(data.available_quantity).to.eql(1));",
                   "}"
                 ]
               }
@@ -6038,7 +6081,7 @@
                 "{{faultProductId}}"
               ]
             },
-            "description": "Available stock should stay at 2. The current code can reduce it to 1 if inventory completes the reservation after the timeout.\n\nRemove the trigger in the PostgreSQL session after the request finishes:\n\n    DROP TRIGGER IF EXISTS postman_delay_reservation ON inventory_reservations;\n    DROP FUNCTION IF EXISTS postman_delay_reservation();\n\nTo check for a leaked reservation, replace PRODUCT_ID and query only the test product:\n\n    SELECT reservation_id, status FROM inventory_reservations\n    WHERE product_id = PRODUCT_ID AND status = 'ACTIVE';\n\nAfter confirming no order exists, open a Postman gRPC request to localhost:9090 without TLS to release the stranded reservation. Use Server Reflection or import proto/inventory.proto, then select inventory.InventoryService/ReleaseStock. Send {\"reservationId\":\"<test-reservation-id>\"} for the test reservation only."
+            "description": "The fixture began with two units and the recovered order contains one unit, so availability must be 1. PostgreSQL must show one ACTIVE reservation for this product matching the recovered MySQL order reservation_id, not two. Restart automatic recovery with docker compose up -d checkout-recovery."
           },
           "response": []
         }

@@ -26,6 +26,14 @@ class OrderResource extends JsonResource
                 'subtotal' => $item->subtotal,
             ]),
             'created_at' => $this->created_at,
+            'status_history' => $this->whenLoaded('statusHistory', fn () => $this->statusHistory->map(fn ($change) => [
+                'id' => $change->id,
+                'from_status' => $change->from_status,
+                'to_status' => $change->to_status,
+                'changed_by' => $change->changed_by,
+                'actor_type' => $change->actor_type,
+                'changed_at' => $change->changed_at,
+            ])),
         ];
     }
 }

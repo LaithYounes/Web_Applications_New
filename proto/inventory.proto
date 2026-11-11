@@ -12,7 +12,8 @@ service InventoryService {
   // Get available quantity for one product
   rpc GetStock (GetStockRequest) returns (GetStockResponse);
 
-  // Reserve multiple products in one atomic operation
+  // Reserve atomically. Repeating an ACTIVE reservation ID with identical items
+  // succeeds without reserving again. Changed items or finalized IDs are rejected.
   rpc ReserveStock (ReserveStockRequest) returns (ReserveStockResponse);
 
   // Release a previous reservation

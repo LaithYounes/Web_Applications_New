@@ -3,6 +3,7 @@
 namespace App\Modules\Orders\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Orders\Models\Order;
 use App\Modules\Orders\Requests\UpdateOrderStatusRequest;
 use App\Modules\Orders\Resources\OrderResource;
 use App\Modules\Orders\Services\OrderService;
@@ -33,7 +34,7 @@ class OrderController extends Controller
     public function show(Request $request, int $id): JsonResponse
     {
         if ($request->user()->role === 'admin') {
-            $order = \App\Modules\Orders\Models\Order::with('items')
+            $order = Order::with(['items', 'statusHistory'])
                 ->findOrFail($id);
         } else {
             $order = $this->orderService->getUserOrder(
@@ -71,7 +72,8 @@ class OrderController extends Controller
     ): JsonResponse {
         $order = $this->orderService->updateStatus(
             $id,
-            $request->validated()['status']
+            $request->validated()['status'],
+            $request->user(),
         );
 
         return response()->json([
@@ -80,16 +82,15 @@ class OrderController extends Controller
             'data' => new OrderResource($order),
         ]);
     }
-    
-public function store(Request $request): JsonResponse
-{
-    $order = $this->orderService->createOrder($request->user());
 
-    return response()->json([
-        'success' => true,
-        'message' => 'Order created successfully',
-        'data' => new OrderResource($order),
-    ], 201);
-}
+    public function store(Request $request): JsonResponse
+    {
+        $order = $this->orderService->createOrder($request->user());
 
+        return response()->json([
+            'success' => true,
+            'message' => 'Order created successfully',
+            'data' => new OrderResource($order),
+        ], 201);
+    }
 }

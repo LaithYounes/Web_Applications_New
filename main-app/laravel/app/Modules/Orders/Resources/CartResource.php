@@ -2,6 +2,7 @@
 
 namespace App\Modules\Orders\Resources;
 
+use App\Modules\Orders\Models\PendingCheckout;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -13,6 +14,7 @@ class CartResource extends JsonResource
 
         return [
             'id' => $this->id,
+            'checkout_pending' => PendingCheckout::where('cart_id', $this->id)->exists(),
             'items' => $items->map(function ($item) {
                 return [
                     'id' => $item->id,

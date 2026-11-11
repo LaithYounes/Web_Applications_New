@@ -3,16 +3,16 @@
 namespace App\Modules\Orders\Services;
 
 use App\Models\User;
+use App\Modules\Inventory\Exceptions\InventoryRejectedException;
 use App\Modules\Inventory\Services\InventoryGrpcClient;
 use App\Modules\Orders\Models\Cart;
+use App\Modules\Orders\Models\CartItem;
 use App\Modules\Orders\Models\Order;
+use App\Modules\Orders\Models\PendingCheckout;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
-use Throwable;
-
 
 class OrderService
 {
@@ -41,129 +41,145 @@ class OrderService
     {
         return Order::query()
             ->where('user_id', $user->id)
-            ->with('items')
+            ->with(['items', 'statusHistory'])
             ->findOrFail($orderId);
     }
 
     public function createOrder(User $user): Order
     {
-        $reservationId = (string) Str::uuid();
-        $reservationCreated = false;
+        // Commit the intent and immutable basket BEFORE calling another service.
+        // A timeout or process crash must not erase the identity of the operation.
+        $checkout = DB::transaction(function () use ($user) {
+            $cart = Cart::query()
+                ->where('user_id', $user->id)
+                ->lockForUpdate()
+                ->first();
 
-        try {
-            $order = DB::transaction(function () use (
-                $user,
-                $reservationId,
-                &$reservationCreated
-            ) {
-                $cart = Cart::query()
-                    ->where('user_id', $user->id)
-                    ->lockForUpdate()
-                    ->first();
-
-                if (!$cart) {
-                    throw ValidationException::withMessages([
-                        'cart' => 'Your cart is empty.',
-                    ]);
-                }
-
-                $cartItems = $cart->items()
-                    // Keep products available until the order and its inventory reservation are saved.
-                    ->with(['product' => fn ($products) => $products->sharedLock()])
-                    ->lockForUpdate()
-                    ->get();
-
-                if ($cartItems->isEmpty()) {
-                    throw ValidationException::withMessages([
-                        'cart' => 'Your cart is empty.',
-                    ]);
-                }
-
-                $reservationItems = [];
-                $orderItems = [];
-                $totalCents = 0;
-
-                foreach ($cartItems as $cartItem) {
-                    $product = $cartItem->product;
-
-                    if (!$product) {
-                        throw ValidationException::withMessages([
-                            'cart' => 'A product in your cart is no longer available.',
-                        ]);
-                    }
-
-                    $quantity = (int) $cartItem->quantity;
-
-                    if ($quantity <= 0) {
-                        throw ValidationException::withMessages([
-                            'cart' => 'Invalid product quantity.',
-                        ]);
-                    }
-
-                    // Convert decimal price to integer cents to avoid float errors.
-                    $priceParts = explode('.', (string) $product->price);
-                    $whole = (int) ($priceParts[0] ?? 0);
-                    $fraction = str_pad($priceParts[1] ?? '0', 2, '0');
-
-                    $unitPriceCents = ($whole * 100) + (int) substr($fraction, 0, 2);
-                    $subtotalCents = $unitPriceCents * $quantity;
-
-                    $totalCents += $subtotalCents;
-
-                    $reservationItems[] = [
-                        'product_id' => (int) $product->id,
-                        'quantity' => $quantity,
-                    ];
-
-                    $orderItems[] = [
-                        'product_id' => $product->id,
-                        'product_name' => $product->name,
-                        'unit_price' => number_format($unitPriceCents / 100, 2, '.', ''),
-                        'quantity' => $quantity,
-                        'subtotal' => number_format($subtotalCents / 100, 2, '.', ''),
-                    ];
-                }
-
-                // Reserve all requested products in Inventory service.
-                $this->inventoryClient->reserveStock(
-                    $reservationId,
-                    $reservationItems
-                );
-
-                $reservationCreated = true;
-
-                $order = Order::create([
-                    'user_id' => $user->id,
-                    'status' => 'pending',
-                    'total_amount' => number_format($totalCents / 100, 2, '.', ''),
-                    'reservation_id' => $reservationId,
+            if (! $cart) {
+                throw ValidationException::withMessages([
+                    'cart' => 'Your cart is empty.',
                 ]);
-
-                $order->items()->createMany($orderItems);
-
-                // Empty the cart only after the order and its items are saved.
-                $cart->items()->delete();
-
-                return $order->load('items');
-            });
-
-            return $order;
-        } catch (Throwable $exception) {
-            // If stock was reserved but saving the order failed, compensate.
-            if ($reservationCreated) {
-                try {
-                    $this->inventoryClient->releaseStock($reservationId);
-                } catch (Throwable $releaseException) {
-                    Log::critical('Failed to release inventory after order creation failure.', [
-                        'reservation_id' => $reservationId,
-                        'user_id' => $user->id,
-                        'error' => $releaseException->getMessage(),
-                    ]);
-                }
             }
 
-            throw $exception;
+            $pending = PendingCheckout::where('cart_id', $cart->id)->first();
+            if ($pending) {
+                return $pending;
+            }
+
+            $cartItems = $cart->items()
+                // Keep products available while saving the immutable checkout snapshot.
+                ->with(['product' => fn ($products) => $products->sharedLock()])
+                ->lockForUpdate()
+                ->get();
+
+            if ($cartItems->isEmpty()) {
+                throw ValidationException::withMessages([
+                    'cart' => 'Your cart is empty.',
+                ]);
+            }
+
+            $orderItems = [];
+            $totalCents = 0;
+
+            foreach ($cartItems as $cartItem) {
+                $product = $cartItem->product;
+
+                if (! $product) {
+                    throw ValidationException::withMessages([
+                        'cart' => 'A product in your cart is no longer available.',
+                    ]);
+                }
+
+                $quantity = (int) $cartItem->quantity;
+
+                if ($quantity <= 0) {
+                    throw ValidationException::withMessages([
+                        'cart' => 'Invalid product quantity.',
+                    ]);
+                }
+
+                // Convert decimal price to integer cents to avoid float errors.
+                $priceParts = explode('.', (string) $product->price);
+                $whole = (int) ($priceParts[0] ?? 0);
+                $fraction = str_pad($priceParts[1] ?? '0', 2, '0');
+
+                $unitPriceCents = ($whole * 100) + (int) substr($fraction, 0, 2);
+                $subtotalCents = $unitPriceCents * $quantity;
+
+                $totalCents += $subtotalCents;
+
+                $orderItems[] = [
+                    'product_id' => $product->id,
+                    'product_name' => $product->name,
+                    'unit_price' => number_format($unitPriceCents / 100, 2, '.', ''),
+                    'quantity' => $quantity,
+                    'subtotal' => number_format($subtotalCents / 100, 2, '.', ''),
+                ];
+            }
+
+            return PendingCheckout::create([
+                'reservation_id' => (string) Str::uuid(),
+                'cart_id' => $cart->id,
+                'order_items' => $orderItems,
+                'total_amount' => number_format($totalCents / 100, 2, '.', ''),
+            ]);
+        });
+
+        return $this->finishCheckout($checkout->reservation_id, $user);
+    }
+
+    public function finishCheckout(string $reservationId, ?User $actor = null): Order
+    {
+        $checkout = PendingCheckout::find($reservationId);
+        $result = DB::transaction(function () use ($reservationId, $checkout, $actor) {
+            if (! $checkout) {
+                // Another worker may have finished this exact operation already.
+                return Order::with(['items', 'statusHistory'])->where('reservation_id', $reservationId)->first()
+                    ?? new InventoryRejectedException('Checkout was rejected. Please retry checkout.');
+            }
+
+            // All checkout and cart-write paths lock the cart first.
+            $cart = Cart::lockForUpdate()->findOrFail($checkout->cart_id);
+            $checkout = PendingCheckout::lockForUpdate()->find($reservationId);
+            if (! $checkout) {
+                return Order::with(['items', 'statusHistory'])->where('reservation_id', $reservationId)->first()
+                    ?? new InventoryRejectedException('Checkout was rejected. Please retry checkout.');
+            }
+
+            try {
+                $this->inventoryClient->reserveStock($reservationId, array_map(
+                    fn (array $item) => ['product_id' => $item['product_id'], 'quantity' => $item['quantity']],
+                    $checkout->order_items,
+                ));
+            } catch (InventoryRejectedException $exception) {
+                // A definitive business rejection has no stock effect. Commit removal
+                // of the intent before surfacing the error so the cart is editable.
+                $checkout->delete();
+
+                return $exception;
+            }
+
+            // Communication and local persistence errors leave the durable intent
+            // intact. Retrying ReserveStock with this ID has no second stock effect.
+            $order = new Order([
+                'user_id' => $cart->user_id,
+                'status' => 'pending',
+                'total_amount' => $checkout->total_amount,
+                'reservation_id' => $reservationId,
+            ]);
+            $order->withStatusActor($actor)->save();
+            $order->items()->createMany($checkout->order_items);
+            CartItem::where('cart_id', $cart->id)->delete();
+            $checkout->delete();
+
+            return $order->load(['items', 'statusHistory']);
+        });
+
+        if ($result instanceof InventoryRejectedException) {
+            throw $result;
         }
+
+        return $result;
     }
 
     public function cancelUserOrder(User $user, int $orderId): Order
@@ -175,9 +191,9 @@ class OrderService
 
         // Persist the intent before releasing stock. If the RPC response is lost,
         // retries can finish the cancellation while confirmation stays blocked.
-        DB::transaction(function () use ($lockedOrder) {
+        DB::transaction(function () use ($lockedOrder, $user) {
             $order = $lockedOrder();
-            if (!in_array($order->status, ['pending', Order::CANCELLING, 'cancelled'], true)) {
+            if (! in_array($order->status, ['pending', Order::CANCELLING, 'cancelled'], true)) {
                 throw ValidationException::withMessages([
                     'status' => 'Only pending orders can be cancelled.',
                 ]);
@@ -185,22 +201,22 @@ class OrderService
 
             if ($order->status === 'pending') {
                 $this->reservationId($order);
-                $order->update(['status' => Order::CANCELLING]);
+                $order->withStatusActor($user)->update(['status' => Order::CANCELLING]);
             }
         });
 
-        return DB::transaction(function () use ($lockedOrder) {
+        return DB::transaction(function () use ($lockedOrder, $user) {
             $order = $lockedOrder();
 
             return $order->status === 'cancelled'
-                ? $order->load('items')
-                : $this->applyStatus($order, 'cancelled');
+                ? $order->load(['items', 'statusHistory'])
+                : $this->applyStatus($order, 'cancelled', $user);
         });
     }
 
-    public function updateStatus(int $orderId, string $status): Order
+    public function updateStatus(int $orderId, string $status, ?User $actor = null): Order
     {
-        return DB::transaction(function () use ($orderId, $status) {
+        return DB::transaction(function () use ($orderId, $status, $actor) {
             $order = Order::query()->lockForUpdate()->findOrFail($orderId);
 
             $allowedTransitions = [
@@ -219,11 +235,11 @@ class OrderService
                 'Invalid order status transition.',
             );
 
-            return $this->applyStatus($order, $status);
+            return $this->applyStatus($order, $status, $actor);
         });
     }
 
-    private function applyStatus(Order $order, string $status): Order
+    private function applyStatus(Order $order, string $status, ?User $actor = null): Order
     {
         if ($status === 'shipped') {
             $this->inventoryClient->commitReservation($this->reservationId($order));
@@ -231,14 +247,14 @@ class OrderService
             $this->inventoryClient->releaseStock($this->reservationId($order));
         }
 
-        $order->update(['status' => $status]);
+        $order->withStatusActor($actor)->update(['status' => $status]);
 
-        return $order->load('items');
+        return $order->load(['items', 'statusHistory']);
     }
 
     private function reservationId(Order $order): string
     {
-        abort_if(!$order->reservation_id, 422, 'Order does not have an inventory reservation.');
+        abort_if(! $order->reservation_id, 422, 'Order does not have an inventory reservation.');
 
         return $order->reservation_id;
     }

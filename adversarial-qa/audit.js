@@ -353,12 +353,17 @@ function faultProbe() {
   const catalog = send('GET', '/products');
   assert('Unhandled gRPC Error Statuses', health.status === 200 && catalog.status === 200, 'Gateway health and catalog are still reachable', { health: health.status, catalog: catalog.status });
   const after = observe([product], [a], 'after_fault_before_retry');
-  ledger(after, { [product]: 1 });
+  // An ambiguous ReserveStock result may legitimately hold stock against a
+  // durable checkout intent. Reconcile the completed order after recovery.
+  if (recovered || method !== 'ReserveStock') ledger(after, { [product]: 1 });
 
   if (!recovered && method === 'ReserveStock') {
     const cartPreserved = cartLines(after.carts[0]) === cartLines(before.carts[0]);
     assert('Data Inconsistency', after.orders[0].length === 0 && cartPreserved, 'Failed checkout preserves the cart and leaves no order');
     if (after.orders[0].length === 0 && cartPreserved) {
+      const pending = required(send('GET', '/cart', a), 200, 'read pending checkout');
+      assert('Data Inconsistency', pending.checkout_pending === true, 'Ambiguous checkout has a durable pending intent');
+      assert('Data Inconsistency', after.stock[0].grpc === (fault === 'delay' ? 0 : 1), 'Stock matches whether the injected call reached inventory');
       const retry = send('POST', '/orders', a);
       evidence('retry', { response: trace(retry) });
       const settled = observe([product], [a], 'after_retry');

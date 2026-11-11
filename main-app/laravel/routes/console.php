@@ -6,6 +6,9 @@ use App\Modules\Products\Models\Product;
 use App\Modules\Products\Services\ProductService;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Schedule;
+
+Schedule::command('orders:recover-checkouts')->everyMinute()->withoutOverlapping(10);
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
@@ -17,7 +20,7 @@ Artisan::command('products:retry-initial-stock', function (ProductService $produ
     foreach (Product::whereNotNull('pending_initial_quantity')->lazyById() as $product) {
         try {
             $products->finishInitialStock($product);
-        } catch (InventoryRejectedException | InventoryServiceException $exception) {
+        } catch (InventoryRejectedException|InventoryServiceException $exception) {
             $this->error("Product {$product->id}: {$exception->getMessage()}");
             $failed = true;
         }
