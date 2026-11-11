@@ -31,6 +31,15 @@ return [
 
     'connections' => [
 
+        'notifications' => [
+            'driver' => 'database',
+            'connection' => null,
+            'table' => 'jobs',
+            'queue' => 'notifications',
+            'retry_after' => 180,
+            'after_commit' => false,
+        ],
+
         'sync' => [
             'driver' => 'sync',
         ],

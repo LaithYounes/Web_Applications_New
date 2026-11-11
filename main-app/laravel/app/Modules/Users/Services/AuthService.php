@@ -3,6 +3,7 @@
 namespace App\Modules\Users\Services;
 
 use App\Models\User;
+use App\Modules\Notifications\Services\DeviceRegistry;
 use Illuminate\Support\Facades\DB;
 
 class AuthService
@@ -31,7 +32,7 @@ class AuthService
     {
         $token = auth('api')->attempt($credentials);
 
-        if (!$token) {
+        if (! $token) {
             return null;
         }
 
@@ -43,6 +44,7 @@ class AuthService
 
     public function logout(): void
     {
+        app(DeviceRegistry::class)->logout(auth('api')->user(), DeviceRegistry::sessionId());
         auth('api')->logout();
     }
 

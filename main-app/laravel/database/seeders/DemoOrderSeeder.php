@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\User;
+use App\Modules\Notifications\Services\OrderNotificationRecorder;
 use App\Modules\Orders\Models\Cart;
 use App\Modules\Orders\Models\Order;
 use App\Modules\Orders\Services\OrderService;
@@ -48,6 +49,11 @@ class DemoOrderSeeder extends Seeder
     ];
 
     public function run(OrderService $orders): void
+    {
+        app(OrderNotificationRecorder::class)->withoutRecording(fn () => $this->seedOrders($orders));
+    }
+
+    private function seedOrders(OrderService $orders): void
     {
         if (! app()->environment('local', 'testing')) {
             throw new RuntimeException('Demo orders can only be seeded in local or testing environments.');

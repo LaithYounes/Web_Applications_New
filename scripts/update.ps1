@@ -70,7 +70,7 @@ exit(1);
 
     Write-Host 'Applying database migrations...'
     Invoke-Checked docker @('compose', 'run', '--rm', '--no-deps', '-T', 'app', 'php', 'artisan', 'migrate', '--force')
-    Invoke-Checked docker @('compose', 'up', '-d', '--no-build', 'app', 'checkout-recovery')
+    Invoke-Checked docker @('compose', 'up', '-d', '--no-build', 'app', 'checkout-recovery', 'notification-worker')
 
     $apiReady = $false
     for ($attempt = 0; $attempt -lt 30; $attempt++) {
@@ -86,11 +86,11 @@ exit(1);
     if (-not $apiReady) { throw 'API readiness failed. Inspect docker compose logs app.' }
 
     $runningServices = & docker compose ps --status running --services
-    if ($LASTEXITCODE -ne 0 -or 'app' -notin $runningServices -or 'checkout-recovery' -notin $runningServices) {
-        throw 'Application or recovery service is not running. Inspect docker compose ps and logs.'
+    if ($LASTEXITCODE -ne 0 -or 'app' -notin $runningServices -or 'checkout-recovery' -notin $runningServices -or 'notification-worker' -notin $runningServices) {
+        throw 'Application, recovery service, or notification worker is not running. Inspect docker compose ps and logs.'
     }
     Invoke-Checked docker @('compose', 'exec', '-T', 'app', 'php', 'artisan', 'schedule:list')
-    Write-Host 'Update completed. API and inventory are ready; checkout recovery is running.' -ForegroundColor Green
+    Write-Host 'Update completed. API and inventory are ready; checkout recovery and notification worker are running.' -ForegroundColor Green
 } catch {
     Write-Host "Update failed: $($_.Exception.Message)" -ForegroundColor Red
     Write-Host 'Resolve the error and run update.cmd again. Database volumes were not reset.'

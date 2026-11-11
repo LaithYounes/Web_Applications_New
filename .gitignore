@@ -12,3 +12,10 @@ target/
 /main-app/laravel/storage/*.key
 /main-app/laravel/storage/app/public/products/
 /main-app/laravel/public/php-test.php
+
+# Local service-account mounts and credential files
+docker-compose.firebase.local.yml
+docker-compose.override.yml
+**/*firebase-adminsdk*.json
+**/firebase-service-account*.json
+**/service-account*.json

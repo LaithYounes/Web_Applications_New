@@ -30,6 +30,9 @@
         <server name="DB_URL" value=""/>
         <server name="MAIL_MAILER" value="array"/>
         <server name="QUEUE_CONNECTION" value="sync"/>
+        <server name="ORDER_PUSH_DRIVER" value="disabled"/>
+        <server name="FIREBASE_PROJECT_ID" value=""/>
+        <server name="FIREBASE_CREDENTIALS" value=""/>
         <server name="SESSION_DRIVER" value="array"/>
         <server name="PULSE_ENABLED" value="false"/>
         <server name="TELESCOPE_ENABLED" value="false"/>

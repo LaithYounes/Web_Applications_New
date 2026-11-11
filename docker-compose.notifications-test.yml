@@ -1,0 +1,79 @@
+name: ecommerce-notifications-test
+
+x-app: &app
+  image: ecommerce2026-app
+  working_dir: /var/www
+  env_file: ./main-app/laravel/.env
+  environment: &test-env
+    APP_ENV: testing
+    APP_DEBUG: "false"
+    APP_CONFIG_CACHE: /tmp/notifications-config.php
+    DB_CONNECTION: mysql
+    DB_HOST: mysql
+    DB_PORT: 3306
+    DB_DATABASE: ecommerce_notifications_test
+    DB_USERNAME: notification_test
+    DB_PASSWORD: isolated_test_password
+    DB_URL: ""
+    CACHE_STORE: database
+    QUEUE_CONNECTION: database
+    ORDER_PUSH_DRIVER: fake
+    ORDER_PUSH_BACKOFF: 10
+    ORDER_PUSH_MAX_ATTEMPTS: 3
+    FIREBASE_CREDENTIALS: ""
+    INVENTORY_GRPC_HOST: inventory-service:9090
+    INVENTORY_GRPC_TIMEOUT: 10000000
+  volumes:
+    - ./main-app/laravel:/var/www
+    - test_vendor:/var/www/vendor:ro
+  depends_on:
+    mysql:
+      condition: service_healthy
+    inventory-service:
+      condition: service_started
+
+services:
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: isolated_root_password
+      MYSQL_DATABASE: ecommerce_notifications_test
+      MYSQL_USER: notification_test
+      MYSQL_PASSWORD: isolated_test_password
+    tmpfs: /var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysql", "--protocol=TCP", "-h127.0.0.1", "-unotification_test", "-pisolated_test_password", "ecommerce_notifications_test", "-e", "SELECT 1"]
+      interval: 2s
+      timeout: 5s
+      retries: 40
+  inventory-db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: notifications_inventory_test
+      POSTGRES_USER: notification_test
+      POSTGRES_PASSWORD: isolated_test_password
+    tmpfs: /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U notification_test -d notifications_inventory_test"]
+      interval: 2s
+      timeout: 5s
+      retries: 40
+  inventory-service:
+    image: ecommerce2026-inventory-service
+    environment:
+      DB_URL: jdbc:postgresql://inventory-db:5432/notifications_inventory_test
+      DB_USERNAME: notification_test
+      DB_PASSWORD: isolated_test_password
+    depends_on:
+      inventory-db:
+        condition: service_healthy
+  app:
+    <<: *app
+    command: ["php", "artisan", "serve", "--no-reload", "--host=0.0.0.0", "--port=8000"]
+    ports: ["127.0.0.1:18080:8000"]
+
+volumes:
+  # Reuse installed dependencies read-only; databases have no persisted volumes.
+  test_vendor:
+    external: true
+    name: ecommerce2026_laravel_vendor

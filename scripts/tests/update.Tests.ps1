@@ -38,6 +38,7 @@ function global:docker {
     if ($command -like 'docker compose ps*') {
         'app'
         if ($global:scenario -ne 'missing-worker') { 'checkout-recovery' }
+        if ($global:scenario -ne 'missing-notification-worker') { 'notification-worker' }
     }
 }
 function global:Invoke-RestMethod {
@@ -58,7 +59,7 @@ function Assert-That {
     if (-not $Condition) { throw $Message }
 }
 
-$scenarios = @('success', 'skip-pull', 'dirty', 'diverged', 'fetch-failure', 'pull-failure', 'build-failure', 'composer-failure', 'inventory-failure', 'migration-failure', 'health-failure', 'missing-worker')
+$scenarios = @('success', 'skip-pull', 'dirty', 'diverged', 'fetch-failure', 'pull-failure', 'build-failure', 'composer-failure', 'inventory-failure', 'migration-failure', 'health-failure', 'missing-worker', 'missing-notification-worker')
 foreach ($scenario in $scenarios) {
     $fixture = Join-Path $testRoot $scenario
     New-Item -ItemType Directory -Path (Join-Path $fixture 'scripts'), (Join-Path $fixture 'main-app/laravel') -Force | Out-Null
@@ -73,7 +74,7 @@ foreach ($scenario in $scenarios) {
     Assert-That (($exitCode -eq 0) -eq $success) "${scenario}: wrong exit code $exitCode. Output: $output"
 
     if ($success) {
-        $orderedSteps = @('docker compose stop', 'docker compose build app inventory-service', 'docker compose up -d --no-build --wait --wait-timeout 120 mysql inventory-db inventory-service', 'docker compose run --rm --no-deps -T app composer install --no-interaction --prefer-dist', 'docker compose run --rm --no-deps -T app php artisan config:clear', 'docker compose run --rm --no-deps -T app php -r *', 'docker compose run --rm --no-deps -T app php artisan migrate --force', 'docker compose up -d --no-build app checkout-recovery', 'HTTP health', 'docker compose ps --status running --services', 'docker compose exec -T app php artisan schedule:list')
+        $orderedSteps = @('docker compose stop', 'docker compose build app inventory-service', 'docker compose up -d --no-build --wait --wait-timeout 120 mysql inventory-db inventory-service', 'docker compose run --rm --no-deps -T app composer install --no-interaction --prefer-dist', 'docker compose run --rm --no-deps -T app php artisan config:clear', 'docker compose run --rm --no-deps -T app php -r *', 'docker compose run --rm --no-deps -T app php artisan migrate --force', 'docker compose up -d --no-build app checkout-recovery notification-worker', 'HTTP health', 'docker compose ps --status running --services', 'docker compose exec -T app php artisan schedule:list')
         $previousIndex = -1
         foreach ($step in $orderedSteps) {
             $matching = @($commands | Where-Object { $_ -like $step })
@@ -92,9 +93,9 @@ foreach ($scenario in $scenarios) {
         Assert-That (-not ($commands -contains 'docker compose stop')) "${scenario}: stopped services during preflight failure"
     } elseif ($scenario -in @('pull-failure', 'build-failure', 'composer-failure', 'inventory-failure')) {
         Assert-That (-not ($log -match 'artisan migrate --force')) "${scenario}: migrated after failure"
-        Assert-That (-not ($commands -contains 'docker compose up -d --no-build app checkout-recovery')) "${scenario}: started application after failure"
+        Assert-That (-not ($commands -contains 'docker compose up -d --no-build app checkout-recovery notification-worker')) "${scenario}: started application after failure"
     } elseif ($scenario -eq 'migration-failure') {
-        Assert-That (-not ($commands -contains 'docker compose up -d --no-build app checkout-recovery')) 'Started application after failed migration.'
+        Assert-That (-not ($commands -contains 'docker compose up -d --no-build app checkout-recovery notification-worker')) 'Started application after failed migration.'
     } else {
         Assert-That (-not ($log -match 'artisan schedule:list')) "${scenario}: continued after failed readiness"
     }

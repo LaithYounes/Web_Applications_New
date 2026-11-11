@@ -3,6 +3,7 @@
 namespace App\Modules\Orders\Models;
 
 use App\Models\User;
+use App\Modules\Notifications\Services\OrderNotificationRecorder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -59,13 +60,14 @@ class Order extends Model
 
     private function recordStatusChange(?string $previous): void
     {
-        $this->statusHistory()->create([
+        $event = $this->statusHistory()->create([
             'from_status' => $previous,
             'to_status' => $this->status,
             'changed_by' => $this->statusActor?->id,
             'actor_type' => $this->statusActor?->role ?? 'system',
             'changed_at' => now(),
         ]);
+        app(OrderNotificationRecorder::class)->record($this, $event);
     }
 
     public function user(): BelongsTo

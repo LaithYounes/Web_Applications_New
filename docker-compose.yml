@@ -136,6 +136,28 @@ services:
       - ./main-app/laravel:/var/www
       - laravel_vendor:/var/www/vendor
 
+  notification-worker:
+    image: ecommerce2026-app
+    restart: unless-stopped
+    command: ["php", "artisan", "queue:work", "notifications", "--queue=notifications", "--sleep=2", "--tries=0", "--timeout=90", "--max-time=3600"]
+    env_file:
+      - ./main-app/laravel/.env
+    environment:
+      DB_CONNECTION: mysql
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_DATABASE: ecommerce_main
+      DB_USERNAME: ecommerce_user
+      DB_PASSWORD: ecommerce_dev_password
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - ecommerce_network
+    volumes:
+      - ./main-app/laravel:/var/www
+      - laravel_vendor:/var/www/vendor
+
 
 volumes:
   mysql_data:
