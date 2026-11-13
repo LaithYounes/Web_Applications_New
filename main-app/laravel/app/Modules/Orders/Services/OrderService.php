@@ -22,27 +22,55 @@ class OrderService
 
     public function getUserOrders(User $user): LengthAwarePaginator
     {
-        return Order::query()
+        // Each query (including eager relations) chooses its PDO explicitly. This
+        // does not change connection state shared by subsequent worker requests.
+        return $this->ordersQuery()
             ->where('user_id', $user->id)
-            ->with('items')
+            ->with($this->orderRelations(['items']))
             ->latest()
             ->paginate(10);
     }
 
     public function getAllOrders(): LengthAwarePaginator
     {
-        return Order::query()
-            ->with(['user', 'items'])
+        return $this->ordersQuery()
+            ->with($this->orderRelations(['user', 'items']))
             ->latest()
             ->paginate(15);
     }
 
     public function getUserOrder(User $user, int $orderId): Order
     {
-        return Order::query()
+        return $this->ordersQuery()
             ->where('user_id', $user->id)
-            ->with(['items', 'statusHistory'])
+            ->with($this->orderRelations(['items', 'statusHistory']))
             ->findOrFail($orderId);
+    }
+
+    public function getOrder(int $orderId): Order
+    {
+        return $this->ordersQuery()
+            ->with($this->orderRelations(['items', 'statusHistory']))
+            ->findOrFail($orderId);
+    }
+
+    private function orderRelations(array $relations): array
+    {
+        if (! config('perf.orders_use_primary', true)) {
+            return $relations;
+        }
+
+        return array_fill_keys($relations, fn ($relation) => $relation->useWritePdo());
+    }
+
+    private function ordersQuery()
+    {
+        $query = Order::query();
+        if (config('perf.orders_use_primary', true)) {
+            $query->useWritePdo();
+        }
+
+        return $query;
     }
 
     public function createOrder(User $user): Order
@@ -130,7 +158,11 @@ class OrderService
 
     public function finishCheckout(string $reservationId, ?User $actor = null): Order
     {
-        $checkout = PendingCheckout::find($reservationId);
+        // A missing intent is a business decision even when list reads may lag.
+        // Keep this preliminary lookup outside the transaction: an ordinary read
+        // inside it would establish a REPEATABLE READ snapshot before cart locking,
+        // hiding an order just completed by the worker we waited for.
+        $checkout = PendingCheckout::useWritePdo()->find($reservationId);
         $result = DB::transaction(function () use ($reservationId, $checkout, $actor) {
             if (! $checkout) {
                 // Another worker may have finished this exact operation already.

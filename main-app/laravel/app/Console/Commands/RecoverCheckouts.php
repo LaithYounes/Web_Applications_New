@@ -17,7 +17,7 @@ class RecoverCheckouts extends Command
     public function handle(OrderService $orders): int
     {
         $failed = false;
-        $checkouts = PendingCheckout::where('updated_at', '<=', now()->subSeconds(max(0, (int) $this->option('min-age'))))
+        $checkouts = PendingCheckout::useWritePdo()->where('updated_at', '<=', now()->subSeconds(max(0, (int) $this->option('min-age'))))
             ->orderBy('updated_at')->limit(max(1, (int) $this->option('limit')))->pluck('reservation_id');
 
         foreach ($checkouts as $reservationId) {

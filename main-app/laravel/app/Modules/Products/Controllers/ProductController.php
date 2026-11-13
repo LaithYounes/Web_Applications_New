@@ -7,14 +7,17 @@ use App\Modules\Products\Requests\StoreProductRequest;
 use App\Modules\Products\Requests\UpdateProductRequest;
 use App\Modules\Products\Resources\ProductResource;
 use App\Modules\Products\Services\ProductService;
+use App\Support\Performance\ProductEtag;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Validator;
 
 class ProductController extends Controller
 {
     public function __construct(
-        private ProductService $productService
+        private ProductService $productService,
+        private ProductEtag $productEtag,
     ) {}
 
     public function index(Request $request)
@@ -33,18 +36,35 @@ class ProductController extends Controller
             ->additional([
                 'success' => true,
                 'message' => 'Products retrieved successfully',
-            ]);
+            ])
+            ->response()
+            ->header('Cache-Control', 'public, max-age=0, must-revalidate');
     }
 
-    public function show(string $id): JsonResponse
+    public function show(Request $request, string $id): JsonResponse|Response
     {
         $product = $this->productService->findById($this->productId($id));
 
-        return response()->json([
+        $payload = [
             'success' => true,
             'message' => 'Product retrieved successfully',
             'data' => new ProductResource($product),
-        ]);
+        ];
+
+        $headers = [
+            'Cache-Control' => 'private, must-revalidate',
+        ];
+
+        if (config('perf.product_etag_enabled')) {
+            $etag = $this->productEtag->forProduct($product, $request);
+            $headers['ETag'] = $etag;
+
+            if ($this->ifNoneMatchMatches($request->header('If-None-Match'), $etag)) {
+                return response('', 304, $headers);
+            }
+        }
+
+        return response()->json($payload, 200, $headers);
     }
 
     public function store(StoreProductRequest $request): JsonResponse
@@ -94,5 +114,21 @@ class ProductController extends Controller
         abort_if($id === false, 404);
 
         return $id;
+    }
+
+    private function ifNoneMatchMatches(?string $header, string $etag): bool
+    {
+        if ($header === null || trim($header) === '') {
+            return false;
+        }
+
+        foreach (explode(',', $header) as $candidate) {
+            $value = trim($candidate);
+            if ($value === '*' || $value === $etag || $value === 'W/'.$etag) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

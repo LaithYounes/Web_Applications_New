@@ -1,0 +1,122 @@
+﻿[
+    {
+        "psversion":  "5.1.26100.9818",
+        "errors":  0,
+        "file":  "scripts\\perf\\Generate-PerfOrders.ps1"
+    },
+    {
+        "psversion":  "5.1.26100.9818",
+        "errors":  0,
+        "file":  "scripts\\perf\\Initialize-PerfEnvironment.ps1"
+    },
+    {
+        "psversion":  "5.1.26100.9818",
+        "errors":  0,
+        "file":  "scripts\\perf\\Perf.Common.ps1"
+    },
+    {
+        "psversion":  "5.1.26100.9818",
+        "errors":  0,
+        "file":  "scripts\\perf\\Validate-PerfEnvironment.ps1"
+    },
+    {
+        "psversion":  "5.1.26100.9818",
+        "errors":  0,
+        "file":  "scripts\\perf\\demo\\Preflight-CommitteeDemo.ps1"
+    },
+    {
+        "psversion":  "5.1.26100.9818",
+        "errors":  0,
+        "file":  "scripts\\perf\\demo\\Show-Dataset.ps1"
+    },
+    {
+        "psversion":  "5.1.26100.9818",
+        "errors":  0,
+        "file":  "scripts\\perf\\demo\\Show-Etag.ps1"
+    },
+    {
+        "psversion":  "5.1.26100.9818",
+        "errors":  0,
+        "file":  "scripts\\perf\\demo\\Show-GrpcInventory.ps1"
+    },
+    {
+        "psversion":  "5.1.26100.9818",
+        "errors":  0,
+        "file":  "scripts\\perf\\demo\\Show-K6Short.ps1"
+    },
+    {
+        "psversion":  "5.1.26100.9818",
+        "errors":  0,
+        "file":  "scripts\\perf\\demo\\Show-RedisCache.ps1"
+    },
+    {
+        "psversion":  "5.1.26100.9818",
+        "errors":  0,
+        "file":  "scripts\\perf\\demo\\Show-Replica.ps1"
+    },
+    {
+        "psversion":  "5.1.26100.9818",
+        "errors":  0,
+        "file":  "scripts\\perf\\demo\\Show-SqlPerformance.ps1"
+    },
+    {
+        "psversion":  "5.1.26100.9818",
+        "errors":  0,
+        "file":  "scripts\\perf\\explain\\Run-ExplainBaseline.ps1"
+    },
+    {
+        "psversion":  "5.1.26100.9818",
+        "errors":  0,
+        "file":  "scripts\\perf\\k6\\Run-Baseline.ps1"
+    },
+    {
+        "psversion":  "5.1.26100.9818",
+        "errors":  0,
+        "file":  "scripts\\perf\\replica\\Initialize-MysqlReplica.ps1"
+    },
+    {
+        "psversion":  "5.1.26100.9818",
+        "errors":  0,
+        "file":  "scripts\\perf\\replica\\Verify-MysqlReplica.ps1"
+    },
+    {
+        "psversion":  "5.1.26100.9818",
+        "errors":  0,
+        "file":  "scripts\\perf\\transfer\\Backup-PerfDataset.ps1"
+    },
+    {
+        "psversion":  "5.1.26100.9818",
+        "errors":  0,
+        "file":  "scripts\\perf\\transfer\\Preflight-SecondLaptop.ps1"
+    },
+    {
+        "psversion":  "5.1.26100.9818",
+        "errors":  0,
+        "file":  "scripts\\perf\\transfer\\Restore-PerfDataset.ps1"
+    },
+    {
+        "psversion":  "5.1.26100.9818",
+        "errors":  0,
+        "file":  "scripts\\perf\\transfer\\Transfer.Common.ps1"
+    },
+    {
+        "psversion":  "5.1.26100.9818",
+        "errors":  0,
+        "file":  "scripts\\qa\\Run-Round3Integration.ps1"
+    },
+    {
+        "psversion":  "5.1.26100.9818",
+        "errors":  0,
+        "file":  "scripts\\qa\\Test-Round3Faults.ps1"
+    },
+    {
+        "psversion":  "5.1.26100.9818",
+        "errors":  0,
+        "file":  "scripts\\qa\\Test-Round3Native.ps1"
+    },
+    {
+        "psversion":  "5.1.26100.9818",
+        "errors":  0,
+        "file":  "scripts\\qa\\Test-Round3PostgresRoundTrip.ps1"
+    }
+]

@@ -1,0 +1,22 @@
+[
+  {
+    "table": "inventory_reservations",
+    "count": 1,
+    "schema": "98D2B31CE099FAAA7A28662025F3DA9EA11553FCE885107C127534629DAB225C",
+    "data": "7E0B3B7864912A2FCADC6E8E1BBE203167325927B12ABAA8D3910D76E23086CE"
+  },
+  {
+    "table": "inventory_stock",
+    "count": 1,
+    "schema": "76545F193DC45D7A8DFF940A14E65E429B4884D8136C20612BB025560E423434",
+    "data": "22EE2A1225DFE05EDF6157AEFE00F9B5BBD7318CBE6FA79AF48BAB6579C273B1"
+  },
+  {
+    "sequence": "inventory_reservations_id_seq",
+    "state": "1|true"
+  },
+  {
+    "sequence": "inventory_stock_id_seq",
+    "state": "1|true"
+  }
+]

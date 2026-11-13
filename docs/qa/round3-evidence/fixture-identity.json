@@ -1,0 +1,9 @@
+{
+  "project": "perf-r3-2a16d8d973-source",
+  "cluster_identity": "02b11b9f-df79-11f1-8708-0242ac130004|7707682272202182695",
+  "mysql": "ecommerce_main_perf|1|1",
+  "postgres": "ecommerce_inventory_perf|1",
+  "product": "منتج اختبار عربي\t12.50",
+  "stock": "1|10|2",
+  "reservation": "r3-fixture|1|2|ACTIVE"
+}

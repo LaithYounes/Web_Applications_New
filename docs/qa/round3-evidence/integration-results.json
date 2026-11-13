@@ -1,0 +1,122 @@
+[
+  {
+    "case": "fresh-empty-owned-resources",
+    "pass": true,
+    "expected_failure": false,
+    "observed_failure": false,
+    "message": "",
+    "seconds": 25.42
+  },
+  {
+    "case": "prepare-isolated-runtime-dependencies",
+    "pass": true,
+    "expected_failure": false,
+    "observed_failure": false,
+    "message": "",
+    "seconds": 51.87
+  },
+  {
+    "case": "fresh-bootstrap-without-replica-and-workers",
+    "pass": true,
+    "expected_failure": false,
+    "observed_failure": false,
+    "message": "",
+    "seconds": 58.9
+  },
+  {
+    "case": "fixture-known-both-databases",
+    "pass": true,
+    "expected_failure": false,
+    "observed_failure": false,
+    "message": "",
+    "seconds": 39.91
+  },
+  {
+    "case": "restart-preserves-fixture-and-resumes-initialization",
+    "pass": true,
+    "expected_failure": false,
+    "observed_failure": false,
+    "message": "",
+    "seconds": 39.91
+  },
+  {
+    "case": "uninitialized-incomplete-replica-refused",
+    "pass": true,
+    "expected_failure": true,
+    "observed_failure": true,
+    "message": "Replica has an incomplete/existing schema; retry explicitly with -ReseedReplica. Primary preserved.",
+    "seconds": 77.39
+  },
+  {
+    "case": "initialize-replica-then-activate-read-identity",
+    "pass": true,
+    "expected_failure": false,
+    "observed_failure": false,
+    "message": "",
+    "seconds": 105.87
+  },
+  {
+    "case": "replica-outage-fails-closed",
+    "pass": true,
+    "expected_failure": true,
+    "observed_failure": true,
+    "message": "Timed out waiting for Laravel schema/read-write/gRPC/Redis after 3 seconds.",
+    "seconds": 22.99
+  },
+  {
+    "case": "explicit-primary-fallback-preserves-fixture",
+    "pass": true,
+    "expected_failure": false,
+    "observed_failure": false,
+    "message": "",
+    "seconds": 88.15
+  },
+  {
+    "case": "real-backup-consistent-both-fixtures",
+    "pass": true,
+    "expected_failure": false,
+    "observed_failure": false,
+    "message": "",
+    "seconds": 72.84
+  },
+  {
+    "case": "real-round-trip-into-empty-resources",
+    "pass": true,
+    "expected_failure": false,
+    "observed_failure": false,
+    "message": "",
+    "seconds": 92.8
+  },
+  {
+    "case": "real-nonempty-destination-refused",
+    "pass": true,
+    "expected_failure": true,
+    "observed_failure": true,
+    "message": "Destination contains schema/data; explicit -AllowOverwrite required for BOTH databases.",
+    "seconds": 7.24
+  },
+  {
+    "case": "real-overwrite-and-retry-after-partial-state",
+    "pass": true,
+    "expected_failure": false,
+    "observed_failure": false,
+    "message": "",
+    "seconds": 63.37
+  },
+  {
+    "case": "checked-native-exit-code",
+    "pass": true,
+    "expected_failure": true,
+    "observed_failure": true,
+    "message": "Stage 'expected-native-exit-47' failed (exit 47); output withheld to protect credentials.",
+    "seconds": 0.65
+  },
+  {
+    "case": "demo-environment-and-git-index-unchanged",
+    "pass": true,
+    "expected_failure": false,
+    "observed_failure": false,
+    "message": "",
+    "seconds": 0.24
+  }
+]

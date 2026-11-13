@@ -1,0 +1,12 @@
+id|1|bigint|NO||
+created_at|2|timestamp without time zone|NO||
+product_id|3|bigint|NO||
+quantity|4|integer|NO||
+reservation_id|5|character varying|NO||100
+status|6|character varying|NO||20
+updated_at|7|timestamp without time zone|NO||
+inventory_reservations_pkey|PRIMARY KEY (id)|t
+inventory_reservations_status_check|CHECK (((status)::text = ANY ((ARRAY['ACTIVE'::character varying, 'RELEASED'::character varying, 'COMMITTED'::character varying])::text[])))|t
+uk_reservation_product|UNIQUE (reservation_id, product_id)|t
+inventory_reservations_pkey|CREATE UNIQUE INDEX inventory_reservations_pkey ON public.inventory_reservations USING btree (id)
+uk_reservation_product|CREATE UNIQUE INDEX uk_reservation_product ON public.inventory_reservations USING btree (reservation_id, product_id)

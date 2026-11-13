@@ -13,14 +13,16 @@ class CartService
 {
     public function getCart(User $user): Cart
     {
-        $cart = Cart::firstOrCreate(['user_id' => $user->id]);
+        $cart = Cart::query()
+            ->when(config('perf.orders_use_primary', true), fn ($query) => $query->useWritePdo())
+            ->firstOrCreate(['user_id' => $user->id]);
 
-        return $cart->load('items.product.category');
+        return $this->loadCart($cart);
     }
 
     public function addItem(User $user, array $data): Cart
     {
-        Cart::firstOrCreate(['user_id' => $user->id]);
+        Cart::useWritePdo()->firstOrCreate(['user_id' => $user->id]);
 
         return DB::transaction(function () use ($user, $data) {
             $cart = $this->editableCart($user);
@@ -37,7 +39,7 @@ class CartService
                 $cart->items()->create($data);
             }
 
-            return $cart->load('items.product.category');
+            return $this->loadCart($cart);
         });
     }
 
@@ -49,7 +51,7 @@ class CartService
             $item = $cart->items()->findOrFail($itemId);
             $item->update(['quantity' => $quantity]);
 
-            return $cart->load('items.product.category');
+            return $this->loadCart($cart);
         });
     }
 
@@ -60,7 +62,7 @@ class CartService
 
             $cart->items()->findOrFail($itemId)->delete();
 
-            return $cart->load('items.product.category');
+            return $this->loadCart($cart);
         });
     }
 
@@ -72,6 +74,20 @@ class CartService
                 'Checkout is awaiting inventory confirmation. Check your orders or retry checkout.',
             );
         }
+
+        return $cart;
+    }
+
+    private function loadCart(Cart $cart): Cart
+    {
+        $primary = fn ($query) => $query->when(
+            config('perf.orders_use_primary', true), fn ($query) => $query->useWritePdo(),
+        );
+        $cart->load(array_fill_keys(['items', 'items.product', 'items.product.category'], $primary));
+        // Resolve before Resource serialization, which may run after a transaction
+        // has ended. Resource must not issue an unscoped, lazy replica query.
+        $cart->setAttribute('checkout_pending', $primary(PendingCheckout::query())
+            ->where('cart_id', $cart->id)->exists());
 
         return $cart;
     }

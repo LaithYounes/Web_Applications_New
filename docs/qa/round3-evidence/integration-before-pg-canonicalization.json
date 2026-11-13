@@ -1,0 +1,90 @@
+[
+  {
+    "case": "fresh-empty-owned-resources",
+    "pass": true,
+    "expected_failure": false,
+    "observed_failure": false,
+    "message": "",
+    "seconds": 44.86
+  },
+  {
+    "case": "prepare-isolated-runtime-dependencies",
+    "pass": true,
+    "expected_failure": false,
+    "observed_failure": false,
+    "message": "",
+    "seconds": 38.84
+  },
+  {
+    "case": "fresh-bootstrap-without-replica-and-workers",
+    "pass": true,
+    "expected_failure": false,
+    "observed_failure": false,
+    "message": "",
+    "seconds": 102.59
+  },
+  {
+    "case": "fixture-known-both-databases",
+    "pass": true,
+    "expected_failure": false,
+    "observed_failure": false,
+    "message": "",
+    "seconds": 44.57
+  },
+  {
+    "case": "restart-preserves-fixture-and-resumes-initialization",
+    "pass": true,
+    "expected_failure": false,
+    "observed_failure": false,
+    "message": "",
+    "seconds": 99.49
+  },
+  {
+    "case": "uninitialized-incomplete-replica-refused",
+    "pass": true,
+    "expected_failure": true,
+    "observed_failure": true,
+    "message": "Replica has an incomplete/existing schema; retry explicitly with -ReseedReplica. Primary preserved.",
+    "seconds": 134.75
+  },
+  {
+    "case": "initialize-replica-then-activate-read-identity",
+    "pass": true,
+    "expected_failure": false,
+    "observed_failure": false,
+    "message": "",
+    "seconds": 139.12
+  },
+  {
+    "case": "replica-outage-fails-closed",
+    "pass": true,
+    "expected_failure": true,
+    "observed_failure": true,
+    "message": "Timed out waiting for Laravel schema/read-write/gRPC/Redis after 3 seconds.",
+    "seconds": 29.27
+  },
+  {
+    "case": "explicit-primary-fallback-preserves-fixture",
+    "pass": true,
+    "expected_failure": false,
+    "observed_failure": false,
+    "message": "",
+    "seconds": 82.66
+  },
+  {
+    "case": "real-backup-consistent-both-fixtures",
+    "pass": true,
+    "expected_failure": false,
+    "observed_failure": false,
+    "message": "",
+    "seconds": 78.71
+  },
+  {
+    "case": "real-round-trip-into-empty-resources",
+    "pass": false,
+    "expected_failure": false,
+    "observed_failure": true,
+    "message": "Fingerprint mismatch: staged PostgreSQL (schema, data, counts or sequence state).",
+    "seconds": 104.94
+  }
+]

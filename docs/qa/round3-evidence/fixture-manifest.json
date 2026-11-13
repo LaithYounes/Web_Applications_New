@@ -1,0 +1,187 @@
+{
+  "version": 2,
+  "created_at": "2026-11-13T18:53:15.9244406+03:00",
+  "mysql_database": "ecommerce_main_perf",
+  "postgres_database": "ecommerce_inventory_perf",
+  "mysql_dump": "بيانات MySQL.sql.gz",
+  "postgres_dump": "مخزون PG.dump",
+  "files": [
+    {
+      "name": "بيانات MySQL.sql.gz",
+      "sha256": "B51D760F22C8C619E003A969106D41B5A7506DA0EDD907BFC89950A46D1F4453"
+    },
+    {
+      "name": "مخزون PG.dump",
+      "sha256": "2CBB0B7357ED610BD8BF5765D3D9D30830CAAD08FD1D20C99DEF6F828AD999DA"
+    }
+  ],
+  "mysql_fingerprint": [
+    {
+      "table": "cache",
+      "count": 0,
+      "schema": "D6974BB953124E873FFE3496ADED2C32DED0C4510D22965C342EC5330AA7318D",
+      "data": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "table": "cache_locks",
+      "count": 0,
+      "schema": "702F2217028ADADD7569A3A78169869E4FA8F45AA0F9FB3F54B4294E5CDCF4BA",
+      "data": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "table": "cart_items",
+      "count": 0,
+      "schema": "DA51059011848BE8FAA611635CCFDCAD6686339C85BEB6FC66A42118B6C1830C",
+      "data": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "table": "carts",
+      "count": 0,
+      "schema": "235F952D328C4F0565A5753EAB2BB1473BB5AE685F6F4BC80B6B3D5E17C353ED",
+      "data": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "table": "catalog_cache_state",
+      "count": 1,
+      "schema": "704986AF5CC5B66A72C3A4BCF48E54D5EBC576AEAC30653BFE568DD4CC731E87",
+      "data": "390993088C4B03A3BCF2B29782D9758793A50DE79F7F7F2F51EF64B216F610A9"
+    },
+    {
+      "table": "categories",
+      "count": 1,
+      "schema": "569345E6D9D8CE43E456CACE500C4546DD9CD510AABB8C5CBF15E4DD99778B2C",
+      "data": "3EE72B2E6B0FDE00A9BD07D450694C26EF732718D22A93C54ACB12A83081315B"
+    },
+    {
+      "table": "failed_jobs",
+      "count": 0,
+      "schema": "D6797145D8B91CC273DA0226BC98B0DD9FB35DCB47E046CE6ABADFB525261482",
+      "data": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "table": "job_batches",
+      "count": 0,
+      "schema": "A36C2F0284D6895828A7E1D443A617103052360D80B6AC4FA060DB043C3B5D07",
+      "data": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "table": "jobs",
+      "count": 0,
+      "schema": "CA45924BE3D403C37689FFB24ED3A53F093DA4F153318B9855A5988F73C9AFD3",
+      "data": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "table": "migrations",
+      "count": 16,
+      "schema": "6F079598DAE18586C1C79DB0047E512B059F37DF948E90828CBCDDCC034A1D68",
+      "data": "5B08DF398BF4790506324019B49E5856F5D617501D793B9FFC6CBB8C9826EFBA"
+    },
+    {
+      "table": "notification_deliveries",
+      "count": 0,
+      "schema": "8E660A20DDE5626E39C741C427F1C65A26BDD5748ABD41736928E6AC62720BF1",
+      "data": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "table": "notification_devices",
+      "count": 0,
+      "schema": "0805FAF1D936E9BB2B5B41F1423262E71C2C6C124FBFEE60F547120BA200CF4C",
+      "data": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "table": "notification_push_attempts",
+      "count": 0,
+      "schema": "48E79EB46B08DE6F8A95C1A1EE27931E939C5DEB8120BF3CD70FDE9DA6D44E6A",
+      "data": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "table": "notification_sessions",
+      "count": 0,
+      "schema": "191BE7FEA4C6FD09E7CDD07C229C6C844E8A4D83902B74E0834C85CF3A271FFB",
+      "data": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "table": "order_items",
+      "count": 1,
+      "schema": "821DC1E0BDE18BD618EA7E4E63A101842E4E58DEF74637CB2B45BA034665AF65",
+      "data": "F6C26EC6643F42CDD9591822E3556C7E3C9BF365BD81F0302964ADCC3D5B5325"
+    },
+    {
+      "table": "order_notifications",
+      "count": 0,
+      "schema": "D971DF9C62B3CA02C075AFD576918E92017C015BA301EB4B13DAC31DD5DC0637",
+      "data": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "table": "order_status_histories",
+      "count": 0,
+      "schema": "6113224CDD6331D89774C88531876409734E1076EC5D2084D19446567E2A2711",
+      "data": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "table": "orders",
+      "count": 1,
+      "schema": "1F05F741704A41E01ED3807041ECD51A3FFEDD347E6869ED9D4BAE7FE046D788",
+      "data": "34F26FB136707E29550D9E085AFF7BCB427C60FD72E7E216A782012922E5D44C"
+    },
+    {
+      "table": "password_reset_tokens",
+      "count": 0,
+      "schema": "E80A2D3E9536239318A93896814C5741E368C5982D78299C841C73B34659DCAC",
+      "data": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "table": "pending_checkouts",
+      "count": 0,
+      "schema": "F77EF7708830DECA0EA68DA68D7FF7559B60EA893AF2138F68482F1B985EB390",
+      "data": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "table": "products",
+      "count": 1,
+      "schema": "C6E068687F791C92C710241833B474C966EDE711D7E1413DF344CCB99BF30BF7",
+      "data": "E1F9FAB0511725441368356176E5DBDF7A4EFC316BA32308C46C42AE825340BD"
+    },
+    {
+      "table": "sessions",
+      "count": 0,
+      "schema": "6D3C1282C285D714BA826D96DB1882A46247120E964FEF8B62177E644271B3BB",
+      "data": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "table": "users",
+      "count": 1,
+      "schema": "DF804526E16C5DC6EBD0CD5CA4D09BE0F5111B24F03A930CBA6B6B27C4EEE046",
+      "data": "463854D06D92EEDF8480BB4AA721E56D162BAB7A6126FC9221A799B27E7B9F29"
+    }
+  ],
+  "postgres_fingerprint": [
+    {
+      "table": "inventory_reservations",
+      "count": 1,
+      "schema": "98D2B31CE099FAAA7A28662025F3DA9EA11553FCE885107C127534629DAB225C",
+      "data": "7E0B3B7864912A2FCADC6E8E1BBE203167325927B12ABAA8D3910D76E23086CE"
+    },
+    {
+      "table": "inventory_stock",
+      "count": 1,
+      "schema": "76545F193DC45D7A8DFF940A14E65E429B4884D8136C20612BB025560E423434",
+      "data": "22EE2A1225DFE05EDF6157AEFE00F9B5BBD7318CBE6FA79AF48BAB6579C273B1"
+    },
+    {
+      "sequence": "inventory_reservations_id_seq",
+      "state": "1|true"
+    },
+    {
+      "sequence": "inventory_stock_id_seq",
+      "state": "1|true"
+    }
+  ],
+  "git_commit": "c657b39b317f5b615b5a7fdbd91cacd2ac9cdb93",
+  "git_branch": "codex/integrate-requirement-3-performance",
+  "working_tree_dirty": true,
+  "mysql_orders": 1,
+  "mysql_order_items": 1,
+  "index_orders_created_at": true,
+  "consistency": "All Compose writers stopped across both snapshots. External writers/DDL must remain disconnected."
+}

@@ -1,0 +1,257 @@
+# Isolated Requirement-3 performance stack.
+# NEVER point this file at ecommerce2026_* demo volumes.
+# Usage (PowerShell, repo root):
+#   docker compose -p ecommerce2026-perf -f docker-compose.perf.yml ...
+# Do NOT merge with docker-compose.yml.
+# Bootstrap uses primary; replica is enabled only after verified initialization.
+name: ecommerce2026-perf
+
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: ${COMPOSE_PROJECT_NAME}-mysql
+    restart: unless-stopped
+    # Flags avoid Windows bind-mount "world-writable conf ignored" behavior.
+    command:
+      - --server-id=1
+      - --log-bin=mysql-bin
+      - --binlog-format=ROW
+      - --binlog-expire-logs-seconds=86400
+      - --gtid-mode=OFF
+      - --enforce-gtid-consistency=OFF
+    environment:
+      MYSQL_ROOT_PASSWORD: perf_root_password
+      MYSQL_DATABASE: ecommerce_main_perf
+      MYSQL_USER: ecommerce_perf_user
+      MYSQL_PASSWORD: ecommerce_perf_password
+    ports:
+      - "127.0.0.1:${PERF_MYSQL_PORT:-3317}:3306"
+    volumes:
+      - mysql_perf_data:/var/lib/mysql
+    networks:
+      - ecommerce_perf_network
+    healthcheck:
+      test:
+        - CMD
+        - mysqladmin
+        - ping
+        - -h
+        - localhost
+        - -u
+        - root
+        - -pperf_root_password
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  inventory-db:
+    image: postgres:16
+    container_name: ${COMPOSE_PROJECT_NAME}-inventory-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ecommerce_inventory_perf
+      POSTGRES_USER: inventory_perf_user
+      POSTGRES_PASSWORD: inventory_perf_password
+    ports:
+      - "127.0.0.1:${PERF_PG_PORT:-5443}:5432"
+    volumes:
+      - postgres_perf_data:/var/lib/postgresql/data
+    networks:
+      - ecommerce_perf_network
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U inventory_perf_user -d ecommerce_inventory_perf
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  app:
+    image: ${PERF_APP_IMAGE:-ecommerce2026-perf-app}
+    build:
+      context: ./main-app/laravel
+      # Perf-only Dockerfile adds bounded pecl retries; demo Dockerfile unchanged.
+      dockerfile: Dockerfile.perf
+    container_name: ${COMPOSE_PROJECT_NAME}-main-app
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${PERF_HTTP_PORT:-8010}:8000"
+    # Inject process env from the performance file only (never demo .env).
+    env_file: &perf-env-file
+      - ${PERF_ENV_FILE:-./main-app/laravel/.env.perf}
+    environment: &perf-app-env
+      # performance keeps demo seeders disabled (they allow only local|testing).
+      APP_ENV: performance
+      APP_URL: http://127.0.0.1:8010
+      DB_URL: ""
+      DB_SOCKET: ""
+      ORDER_PUSH_DRIVER: disabled
+      DB_CONNECTION: mysql
+      DB_HOST: mysql
+      DB_PORT: "3306"
+      DB_DATABASE: ecommerce_main_perf
+      DB_USERNAME: ecommerce_perf_user
+      DB_PASSWORD: ecommerce_perf_password
+      INVENTORY_GRPC_HOST: inventory-service:9090
+      CACHE_STORE: redis
+      REDIS_CLIENT: predis
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      PERF_ENVIRONMENT: "1"
+      PERF_FORBIDDEN_DEMO_PORTS: "8000,3307,5433,9090"
+      PERF_CATALOG_CACHE: "1"
+      PERF_PRODUCT_ETAG: "1"
+      PERF_ORDERS_USE_PRIMARY: "1"
+      # Pointed at real replica after scripts/perf/replica/Initialize-MysqlReplica.ps1.
+      DB_READ_HOST: ${DB_READ_HOST:-mysql}
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      inventory-service:
+        condition: service_started
+    networks:
+      - ecommerce_perf_network
+    volumes: &perf-app-volumes
+      # Shared source code (demo + perf). Writable runtime paths are overridden below.
+      - ./main-app/laravel:/var/www
+      # Inside the container Laravel loads ".env"; map perf secrets there (host .env untouched).
+      - ${PERF_ENV_FILE:-./main-app/laravel/.env.perf}:/var/www/.env:ro
+      - laravel_perf_vendor:/var/www/vendor
+      - laravel_perf_storage:/var/www/storage
+      - laravel_perf_bootstrap_cache:/var/www/bootstrap/cache
+    # Writable runtime directories live only in isolated volumes.
+    command:
+      - sh
+      - -ec
+      - |
+        mkdir -p storage/framework/sessions storage/framework/views storage/framework/cache/data storage/logs storage/app/public bootstrap/cache
+        exec php artisan serve --no-reload --host=0.0.0.0 --port=8000
+
+  checkout-recovery:
+    profiles: ["lifecycle"]
+    image: ${PERF_APP_IMAGE:-ecommerce2026-perf-app}
+    restart: unless-stopped
+    env_file: *perf-env-file
+    environment: *perf-app-env
+    volumes: *perf-app-volumes
+    networks: [ecommerce_perf_network]
+    command: ["php", "artisan", "schedule:work"]
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  notification-worker:
+    profiles: ["lifecycle"]
+    image: ${PERF_APP_IMAGE:-ecommerce2026-perf-app}
+    restart: unless-stopped
+    env_file: *perf-env-file
+    environment: *perf-app-env
+    volumes: *perf-app-volumes
+    networks: [ecommerce_perf_network]
+    command: ["php", "artisan", "queue:work", "notifications", "--queue=notifications", "--sleep=2", "--tries=0", "--timeout=90"]
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  inventory-service:
+    image: ${PERF_INVENTORY_IMAGE:-ecommerce2026-perf-inventory}
+    build:
+      context: .
+      dockerfile: inventory-service/Dockerfile
+    container_name: ${COMPOSE_PROJECT_NAME}-inventory-service
+    restart: unless-stopped
+    environment:
+      DB_URL: jdbc:postgresql://inventory-db:5432/ecommerce_inventory_perf
+      DB_USERNAME: inventory_perf_user
+      DB_PASSWORD: inventory_perf_password
+    ports:
+      - "127.0.0.1:${PERF_GRPC_PORT:-9100}:9090"
+    depends_on:
+      inventory-db:
+        condition: service_healthy
+    networks:
+      - ecommerce_perf_network
+
+  redis:
+    image: redis:7-alpine
+    container_name: ${COMPOSE_PROJECT_NAME}-redis
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${PERF_REDIS_PORT:-6389}:6379"
+    volumes:
+      - redis_perf_data:/data
+    networks:
+      - ecommerce_perf_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
+  # Real MySQL replica — initialized by scripts/perf/replica/Initialize-MysqlReplica.ps1
+  # Started explicitly; readers remain on primary until initialization is verified.
+  mysql-replica:
+    profiles: ["replica"]
+    image: mysql:8.4
+    container_name: ${COMPOSE_PROJECT_NAME}-mysql-replica
+    restart: unless-stopped
+    # Do NOT enable super-read-only here: MySQL entrypoint must set root password on first boot.
+    # Initialize-MysqlReplica.ps1 enables read_only after seeding.
+    command:
+      - --server-id=2
+      - --log-bin=mysql-bin
+      - --binlog-format=ROW
+      - --relay-log=relay-bin
+      - --gtid-mode=OFF
+      - --enforce-gtid-consistency=OFF
+      - --skip-replica-start
+    environment:
+      MYSQL_ROOT_PASSWORD: perf_root_password
+      MYSQL_DATABASE: ecommerce_main_perf
+      MYSQL_USER: ecommerce_perf_user
+      MYSQL_PASSWORD: ecommerce_perf_password
+    ports:
+      - "127.0.0.1:${PERF_REPLICA_PORT:-3318}:3306"
+    volumes:
+      - mysql_perf_replica_data:/var/lib/mysql
+    networks:
+      - ecommerce_perf_network
+    healthcheck:
+      test:
+        - CMD
+        - mysqladmin
+        - ping
+        - -h
+        - localhost
+        - -u
+        - root
+        - -pperf_root_password
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 40s
+
+volumes:
+  mysql_perf_data:
+    name: ${PERF_RESOURCE_PREFIX:-ecommerce2026_perf}_mysql_data
+  postgres_perf_data:
+    name: ${PERF_RESOURCE_PREFIX:-ecommerce2026_perf}_postgres_data
+  laravel_perf_vendor:
+    name: ${PERF_RESOURCE_PREFIX:-ecommerce2026_perf}_laravel_vendor
+  laravel_perf_storage:
+    name: ${PERF_RESOURCE_PREFIX:-ecommerce2026_perf}_laravel_storage
+  laravel_perf_bootstrap_cache:
+    name: ${PERF_RESOURCE_PREFIX:-ecommerce2026_perf}_laravel_bootstrap_cache
+  redis_perf_data:
+    name: ${PERF_RESOURCE_PREFIX:-ecommerce2026_perf}_redis_data
+  mysql_perf_replica_data:
+    name: ${PERF_RESOURCE_PREFIX:-ecommerce2026_perf}_mysql_replica_data
+
+networks:
+  ecommerce_perf_network:
+    name: ${PERF_RESOURCE_PREFIX:-ecommerce2026_perf}_network
+    driver: bridge

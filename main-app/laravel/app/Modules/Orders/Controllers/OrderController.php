@@ -3,7 +3,6 @@
 namespace App\Modules\Orders\Controllers;
 
 use App\Http\Controllers\Controller;
-use App\Modules\Orders\Models\Order;
 use App\Modules\Orders\Requests\UpdateOrderStatusRequest;
 use App\Modules\Orders\Resources\OrderResource;
 use App\Modules\Orders\Services\OrderService;
@@ -34,8 +33,7 @@ class OrderController extends Controller
     public function show(Request $request, int $id): JsonResponse
     {
         if ($request->user()->role === 'admin') {
-            $order = Order::with(['items', 'statusHistory'])
-                ->findOrFail($id);
+            $order = $this->orderService->getOrder($id);
         } else {
             $order = $this->orderService->getUserOrder(
                 $request->user(),

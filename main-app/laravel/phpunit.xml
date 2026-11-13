@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
-         bootstrap="vendor/autoload.php"
+         bootstrap="tests/bootstrap.php"
          colors="true"
 >
     <testsuites>
@@ -19,23 +19,24 @@
     </source>
     <php>
         <!-- Override inherited Compose settings before Laravel loads its configuration. -->
-        <server name="APP_ENV" value="testing"/>
-        <server name="APP_CONFIG_CACHE" value="bootstrap/cache/config.testing.php"/>
-        <server name="APP_MAINTENANCE_DRIVER" value="file"/>
-        <server name="BCRYPT_ROUNDS" value="4"/>
-        <server name="BROADCAST_CONNECTION" value="null"/>
-        <server name="CACHE_STORE" value="array"/>
-        <server name="DB_CONNECTION" value="sqlite"/>
-        <server name="DB_DATABASE" value=":memory:"/>
-        <server name="DB_URL" value=""/>
-        <server name="MAIL_MAILER" value="array"/>
-        <server name="QUEUE_CONNECTION" value="sync"/>
-        <server name="ORDER_PUSH_DRIVER" value="disabled"/>
-        <server name="FIREBASE_PROJECT_ID" value=""/>
-        <server name="FIREBASE_CREDENTIALS" value=""/>
-        <server name="SESSION_DRIVER" value="array"/>
-        <server name="PULSE_ENABLED" value="false"/>
-        <server name="TELESCOPE_ENABLED" value="false"/>
-        <server name="NIGHTWATCH_ENABLED" value="false"/>
+        <env force="true" name="APP_ENV" value="testing"/>
+        <env force="true" name="APP_KEY" value="base64:dGVzdGluZy1vbmx5LWtleS1mb3ItdW5pdC10ZXN0cyE="/>
+        <env force="true" name="APP_MAINTENANCE_DRIVER" value="file"/>
+        <env force="true" name="BCRYPT_ROUNDS" value="4"/>
+        <env force="true" name="BROADCAST_CONNECTION" value="null"/>
+        <env force="true" name="CACHE_STORE" value="array"/>
+        <env force="true" name="DB_CONNECTION" value="sqlite"/>
+        <env force="true" name="DB_DATABASE" value=":memory:"/>
+        <env force="true" name="DB_URL" value=""/>
+        <env force="true" name="MAIL_MAILER" value="array"/>
+        <env force="true" name="QUEUE_CONNECTION" value="sync"/>
+        <env force="true" name="ORDER_PUSH_DRIVER" value="disabled"/>
+        <env force="true" name="FIREBASE_PROJECT_ID" value=""/>
+        <env force="true" name="FIREBASE_CREDENTIALS" value=""/>
+        <env force="true" name="SESSION_DRIVER" value="array"/>
+        <env force="true" name="PULSE_ENABLED" value="false"/>
+        <env force="true" name="TELESCOPE_ENABLED" value="false"/>
+        <env force="true" name="NIGHTWATCH_ENABLED" value="false"/>
+        <env force="true" name="JWT_SECRET" value="testing-only-jwt-secret-not-for-runtime-use"/>
     </php>
 </phpunit>

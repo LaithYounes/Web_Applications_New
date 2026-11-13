@@ -115,6 +115,56 @@ class ReservationIdempotencyTests {
         }
     }
 
+    @Test
+    void differentReservationsCompetingForLastUnitCannotOversell() throws Exception {
+        for (int attempt = 0; attempt < 20; attempt++) {
+            long product = stock(1);
+            String a = UUID.randomUUID().toString();
+            String b = UUID.randomUUID().toString();
+            try (var pool = Executors.newVirtualThreadPerTaskExecutor()) {
+                var start = new CountDownLatch(1);
+                var first = pool.submit(() -> { start.await(); return compete(a, product); });
+                var second = pool.submit(() -> { start.await(); return compete(b, product); });
+                start.countDown();
+                assertNotEquals(first.get(15, TimeUnit.SECONDS), second.get(15, TimeUnit.SECONDS));
+            }
+            assertEquals(0, inventory.getAvailableQuantity(product));
+            assertEquals(1, reservations.findByReservationId(a).size() + reservations.findByReservationId(b).size());
+        }
+    }
+
+    @Test
+    void repeatedFinalizationAndMultiProductRollbackPreserveStock() {
+        long a = stock(2);
+        long b = stock(1);
+        String rejected = UUID.randomUUID().toString();
+        assertThrows(InventoryManagementService.InsufficientStockException.class,
+                () -> inventory.reserveStock(rejected, Map.of(a, 1, b, 2)));
+        assertEquals(2, inventory.getAvailableQuantity(a));
+        assertEquals(1, inventory.getAvailableQuantity(b));
+        assertTrue(reservations.findByReservationId(rejected).isEmpty());
+        String released = UUID.randomUUID().toString();
+        inventory.reserveStock(released, Map.of(a, 1));
+        assertTrue(inventory.releaseStock(released));
+        assertTrue(inventory.releaseStock(released));
+        assertFalse(inventory.commitReservation(released));
+        String committed = UUID.randomUUID().toString();
+        inventory.reserveStock(committed, Map.of(a, 1));
+        assertTrue(inventory.commitReservation(committed));
+        assertTrue(inventory.commitReservation(committed));
+        assertFalse(inventory.releaseStock(committed));
+        assertEquals(1, inventory.getAvailableQuantity(a));
+    }
+
+    private boolean compete(String id, long product) {
+        try {
+            inventory.reserveStock(id, Map.of(product, 1));
+            return true;
+        } catch (InventoryManagementService.InsufficientStockException expected) {
+            return false;
+        }
+    }
+
     private long stock(int quantity) {
         long id = PRODUCT_IDS.incrementAndGet();
         inventory.initializeStock(id, quantity);

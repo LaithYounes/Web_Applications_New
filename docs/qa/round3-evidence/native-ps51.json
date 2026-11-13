@@ -1,0 +1,24 @@
+﻿[
+    {
+        "powershell":  "5.1.26100.9818",
+        "case":  "native-version-ps51",
+        "pass":  true,
+        "version":  "27.2.0"
+    },
+    {
+        "pass":  true,
+        "case":  "nonzero-exit-ps51"
+    },
+    {
+        "pass":  true,
+        "case":  "unicode-file-copy-and-utf8-ps51"
+    },
+    {
+        "pass":  true,
+        "case":  "byte-preserving-streams-ps51"
+    },
+    {
+        "pass":  true,
+        "case":  "real-bad-authentication-ps51"
+    }
+]

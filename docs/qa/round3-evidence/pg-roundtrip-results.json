@@ -1,0 +1,14 @@
+[
+  {
+    "pass": true,
+    "case": "postgres-schema-data-sequence-roundtrip"
+  },
+  {
+    "pass": true,
+    "case": "changed-status-constraint-rejected"
+  },
+  {
+    "pass": true,
+    "case": "missing-quantity-constraint-rejected"
+  }
+]

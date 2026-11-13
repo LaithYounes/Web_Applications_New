@@ -1,0 +1,9 @@
+[mysqld]
+# Primary for ecommerce2026-perf only. Does not affect demo MySQL.
+# File-position replication (safer to enable on an existing non-GTID volume).
+server-id = 1
+log_bin = mysql-bin
+binlog_format = ROW
+binlog_expire_logs_seconds = 86400
+gtid_mode = OFF
+enforce_gtid_consistency = OFF

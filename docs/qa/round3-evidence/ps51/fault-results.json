@@ -1,0 +1,761 @@
+﻿[
+    {
+        "case":  "empty-valid",
+        "pass":  true,
+        "expected_failure":  false,
+        "observed_failure":  false,
+        "message":  "",
+        "events":  [
+                       "restore databases startup",
+                       "SQL mysql",
+                       "SQL postgres",
+                       "writers-stopped",
+                       "SQL mysql",
+                       "SQL postgres",
+                       "SQL mysql",
+                       "SQL postgres",
+                       "MySQL import",
+                       "PostgreSQL restore copy",
+                       "PostgreSQL restore",
+                       "restore file cleanup",
+                       "prestate-export",
+                       "SQL mysql",
+                       "MySQL import",
+                       "SQL postgres",
+                       "PostgreSQL restore copy",
+                       "PostgreSQL restore",
+                       "restore file cleanup",
+                       "restore config clear",
+                       "SQL mysql",
+                       "SQL postgres",
+                       "resume restore writer",
+                       "resume restore writer"
+                   ]
+    },
+    {
+        "case":  "nonempty-no-overwrite",
+        "pass":  true,
+        "expected_failure":  true,
+        "observed_failure":  true,
+        "message":  "Destination contains schema/data; explicit -AllowOverwrite required for BOTH databases.",
+        "events":  [
+                       "restore databases startup",
+                       "SQL mysql",
+                       "SQL postgres",
+                       "writers-stopped",
+                       "SQL mysql",
+                       "SQL postgres",
+                       "writers-stopped"
+                   ]
+    },
+    {
+        "case":  "nonempty-allow-overwrite",
+        "pass":  true,
+        "expected_failure":  false,
+        "observed_failure":  false,
+        "message":  "",
+        "events":  [
+                       "restore databases startup",
+                       "SQL mysql",
+                       "SQL postgres",
+                       "writers-stopped",
+                       "SQL mysql",
+                       "SQL postgres",
+                       "SQL mysql",
+                       "SQL postgres",
+                       "MySQL import",
+                       "PostgreSQL restore copy",
+                       "PostgreSQL restore",
+                       "restore file cleanup",
+                       "prestate-export",
+                       "SQL mysql",
+                       "MySQL import",
+                       "SQL postgres",
+                       "PostgreSQL restore copy",
+                       "PostgreSQL restore",
+                       "restore file cleanup",
+                       "restore config clear",
+                       "SQL mysql",
+                       "SQL postgres",
+                       "resume restore writer",
+                       "resume restore writer"
+                   ]
+    },
+    {
+        "case":  "count-query-fails",
+        "pass":  true,
+        "expected_failure":  true,
+        "observed_failure":  true,
+        "message":  "Injected SQL failure",
+        "events":  [
+                       "restore databases startup",
+                       "SQL mysql",
+                       "SQL postgres",
+                       "writers-stopped",
+                       "SQL mysql",
+                       "writers-stopped"
+                   ]
+    },
+    {
+        "case":  "count-parsing-fails",
+        "pass":  true,
+        "expected_failure":  true,
+        "observed_failure":  true,
+        "message":  "Count query did not return one unsigned integer; refusing to infer emptiness.",
+        "events":  [
+                       "restore databases startup",
+                       "SQL mysql",
+                       "SQL postgres",
+                       "writers-stopped",
+                       "SQL mysql",
+                       "writers-stopped"
+                   ]
+    },
+    {
+        "case":  "invalid-credentials",
+        "pass":  true,
+        "expected_failure":  true,
+        "observed_failure":  true,
+        "message":  "Injected invalid SQL credentials",
+        "events":  [
+                       "restore databases startup",
+                       "SQL mysql",
+                       "SQL postgres",
+                       "writers-stopped"
+                   ]
+    },
+    {
+        "case":  "wrong-identity",
+        "pass":  true,
+        "expected_failure":  true,
+        "observed_failure":  true,
+        "message":  "Wrong destination project/volume",
+        "events":  [
+                       "restore databases startup",
+                       "writers-stopped"
+                   ]
+    },
+    {
+        "case":  "mysql-import",
+        "pass":  true,
+        "expected_failure":  true,
+        "observed_failure":  true,
+        "message":  "Injected checked native failure: MySQL import",
+        "events":  [
+                       "restore databases startup",
+                       "SQL mysql",
+                       "SQL postgres",
+                       "writers-stopped",
+                       "SQL mysql",
+                       "SQL postgres",
+                       "SQL mysql",
+                       "SQL postgres",
+                       "MySQL import",
+                       "writers-stopped",
+                       "SQL mysql",
+                       "SQL postgres"
+                   ]
+    },
+    {
+        "case":  "postgres-copy",
+        "pass":  true,
+        "expected_failure":  true,
+        "observed_failure":  true,
+        "message":  "Injected checked native failure: PostgreSQL restore copy",
+        "events":  [
+                       "restore databases startup",
+                       "SQL mysql",
+                       "SQL postgres",
+                       "writers-stopped",
+                       "SQL mysql",
+                       "SQL postgres",
+                       "SQL mysql",
+                       "SQL postgres",
+                       "MySQL import",
+                       "PostgreSQL restore copy",
+                       "restore file cleanup",
+                       "writers-stopped",
+                       "SQL mysql",
+                       "SQL postgres"
+                   ]
+    },
+    {
+        "case":  "staged-pg-restore",
+        "pass":  true,
+        "expected_failure":  true,
+        "observed_failure":  true,
+        "message":  "Injected checked native failure: PostgreSQL restore",
+        "events":  [
+                       "restore databases startup",
+                       "SQL mysql",
+                       "SQL postgres",
+                       "writers-stopped",
+                       "SQL mysql",
+                       "SQL postgres",
+                       "SQL mysql",
+                       "SQL postgres",
+                       "MySQL import",
+                       "PostgreSQL restore copy",
+                       "PostgreSQL restore",
+                       "restore file cleanup",
+                       "writers-stopped",
+                       "SQL mysql",
+                       "SQL postgres"
+                   ]
+    },
+    {
+        "case":  "mysql-live-success-then-pg-fails",
+        "pass":  true,
+        "expected_failure":  true,
+        "observed_failure":  true,
+        "message":  "Injected live PostgreSQL restore failure",
+        "events":  [
+                       "restore databases startup",
+                       "SQL mysql",
+                       "SQL postgres",
+                       "writers-stopped",
+                       "SQL mysql",
+                       "SQL postgres",
+                       "SQL mysql",
+                       "SQL postgres",
+                       "MySQL import",
+                       "PostgreSQL restore copy",
+                       "PostgreSQL restore",
+                       "restore file cleanup",
+                       "prestate-export",
+                       "SQL mysql",
+                       "MySQL import",
+                       "SQL postgres",
+                       "PostgreSQL restore copy",
+                       "PostgreSQL restore",
+                       "restore file cleanup",
+                       "writers-stopped",
+                       "SQL mysql",
+                       "SQL postgres"
+                   ]
+    },
+    {
+        "case":  "pg-post-validation",
+        "pass":  true,
+        "expected_failure":  true,
+        "observed_failure":  true,
+        "message":  "Fingerprint mismatch: live PostgreSQL [inventory_stock/data] (schema, data, counts or sequence state).",
+        "events":  [
+                       "restore databases startup",
+                       "SQL mysql",
+                       "SQL postgres",
+                       "writers-stopped",
+                       "SQL mysql",
+                       "SQL postgres",
+                       "SQL mysql",
+                       "SQL postgres",
+                       "MySQL import",
+                       "PostgreSQL restore copy",
+                       "PostgreSQL restore",
+                       "restore file cleanup",
+                       "prestate-export",
+                       "SQL mysql",
+                       "MySQL import",
+                       "SQL postgres",
+                       "PostgreSQL restore copy",
+                       "PostgreSQL restore",
+                       "restore file cleanup",
+                       "writers-stopped",
+                       "SQL mysql",
+                       "SQL postgres"
+                   ]
+    },
+    {
+        "case":  "old-200k-cannot-hide-failure",
+        "pass":  true,
+        "expected_failure":  true,
+        "observed_failure":  true,
+        "message":  "Fingerprint mismatch: staged MySQL [orders/count, orders/data] (schema, data, counts or sequence state).",
+        "events":  [
+                       "restore databases startup",
+                       "SQL mysql",
+                       "SQL postgres",
+                       "writers-stopped",
+                       "SQL mysql",
+                       "SQL postgres",
+                       "SQL mysql",
+                       "SQL postgres",
+                       "MySQL import",
+                       "PostgreSQL restore copy",
+                       "PostgreSQL restore",
+                       "restore file cleanup",
+                       "writers-stopped",
+                       "SQL mysql",
+                       "SQL postgres"
+                   ]
+    },
+    {
+        "case":  "cleanup-fails",
+        "pass":  true,
+        "expected_failure":  true,
+        "observed_failure":  true,
+        "message":  "Injected cleanup refusal",
+        "events":  [
+                       "restore databases startup",
+                       "SQL mysql",
+                       "SQL postgres",
+                       "writers-stopped",
+                       "SQL mysql",
+                       "SQL postgres",
+                       "SQL mysql",
+                       "SQL postgres",
+                       "MySQL import",
+                       "PostgreSQL restore copy",
+                       "PostgreSQL restore",
+                       "restore file cleanup",
+                       "prestate-export",
+                       "SQL mysql",
+                       "MySQL import",
+                       "SQL postgres",
+                       "PostgreSQL restore copy",
+                       "PostgreSQL restore",
+                       "restore file cleanup",
+                       "restore config clear",
+                       "SQL mysql",
+                       "SQL postgres",
+                       "writers-stopped"
+                   ]
+    },
+    {
+        "case":  "missing-manifest",
+        "pass":  true,
+        "expected_failure":  true,
+        "observed_failure":  true,
+        "message":  "Cannot find path \u0027C:\\Users\\laith\\AppData\\Local\\Temp\\perf-owned-7c3a11f48c244970a8b3a48e6310e197\\نسخة fixture with spaces\\MANIFEST.json\u0027 because it does not exist.",
+        "events":  [
+
+                   ]
+    },
+    {
+        "case":  "invalid-manifest",
+        "pass":  true,
+        "expected_failure":  true,
+        "observed_failure":  true,
+        "message":  "Invalid object passed in, \u0027:\u0027 or \u0027}\u0027 expected. (8): {invalid",
+        "events":  [
+
+                   ]
+    },
+    {
+        "case":  "missing-file",
+        "pass":  true,
+        "expected_failure":  true,
+        "observed_failure":  true,
+        "message":  "Cannot find path \u0027C:\\Users\\laith\\AppData\\Local\\Temp\\perf-owned-7c3a11f48c244970a8b3a48e6310e197\\نسخة fixture with spaces\\absent.sql.gz\u0027 because it does not exist.",
+        "events":  [
+
+                   ]
+    },
+    {
+        "case":  "checksum-mismatch",
+        "pass":  true,
+        "expected_failure":  true,
+        "observed_failure":  true,
+        "message":  "Backup checksum mismatch.",
+        "events":  [
+
+                   ]
+    },
+    {
+        "case":  "manifest-traversal",
+        "pass":  true,
+        "expected_failure":  true,
+        "observed_failure":  true,
+        "message":  "Invalid manifest file entry.",
+        "events":  [
+
+                   ]
+    },
+    {
+        "case":  "manifest-ads",
+        "pass":  true,
+        "expected_failure":  true,
+        "observed_failure":  true,
+        "message":  "Invalid manifest file entry.",
+        "events":  [
+
+                   ]
+    },
+    {
+        "case":  "manifest-missing-checksum",
+        "pass":  true,
+        "expected_failure":  true,
+        "observed_failure":  true,
+        "message":  "Invalid/unsupported manifest (version 2 with both fingerprints and two checksums required).",
+        "events":  [
+
+                   ]
+    },
+    {
+        "case":  "decompression",
+        "pass":  true,
+        "expected_failure":  true,
+        "observed_failure":  true,
+        "message":  "Exception calling \"CopyTo\" with \"1\" argument(s): \"The magic number in GZip header is not correct. Make sure you are passing in a GZip stream.\"",
+        "events":  [
+
+                   ]
+    },
+    {
+        "case":  "unicode-and-spaces",
+        "pass":  true,
+        "expected_failure":  false,
+        "observed_failure":  false,
+        "message":  "",
+        "events":  [
+
+                   ]
+    },
+    {
+        "case":  "cleanup-rejects-unowned",
+        "pass":  true,
+        "expected_failure":  true,
+        "observed_failure":  true,
+        "message":  "Cleanup refused: directory ownership mismatch.",
+        "events":  [
+
+                   ]
+    },
+    {
+        "case":  "delayed-readiness",
+        "pass":  true,
+        "expected_failure":  false,
+        "observed_failure":  false,
+        "message":  "",
+        "events":  [
+
+                   ]
+    },
+    {
+        "case":  "readiness-timeout",
+        "pass":  true,
+        "expected_failure":  true,
+        "observed_failure":  true,
+        "message":  "Timed out waiting for injected unavailable SQL after 1 seconds.",
+        "events":  [
+
+                   ]
+    },
+    {
+        "case":  "readiness-rejects-nonboolean-output",
+        "pass":  true,
+        "expected_failure":  true,
+        "observed_failure":  true,
+        "message":  "Timed out waiting for injected unexpected output after 1 seconds.",
+        "events":  [
+
+                   ]
+    },
+    {
+        "case":  "bootstrap-migration",
+        "pass":  true,
+        "expected_failure":  true,
+        "observed_failure":  true,
+        "message":  "Injected checked native failure: migration",
+        "events":  [
+                       "compose validation",
+                       "database startup",
+                       "writers-stopped",
+                       "config clear",
+                       "migration"
+                   ]
+    },
+    {
+        "case":  "bootstrap-config clear",
+        "pass":  true,
+        "expected_failure":  true,
+        "observed_failure":  true,
+        "message":  "Injected checked native failure: config clear",
+        "events":  [
+                       "compose validation",
+                       "database startup",
+                       "writers-stopped",
+                       "config clear"
+                   ]
+    },
+    {
+        "case":  "bootstrap-database startup",
+        "pass":  true,
+        "expected_failure":  true,
+        "observed_failure":  true,
+        "message":  "Injected checked native failure: database startup",
+        "events":  [
+                       "compose validation",
+                       "database startup"
+                   ]
+    },
+    {
+        "case":  "bootstrap-application recreate",
+        "pass":  true,
+        "expected_failure":  true,
+        "observed_failure":  true,
+        "message":  "Injected checked native failure: application recreate",
+        "events":  [
+                       "compose validation",
+                       "database startup",
+                       "writers-stopped",
+                       "config clear",
+                       "migration",
+                       "application recreate"
+                   ]
+    },
+    {
+        "case":  "bootstrap-build",
+        "pass":  true,
+        "expected_failure":  true,
+        "observed_failure":  true,
+        "message":  "Injected checked native failure: build",
+        "events":  [
+                       "compose validation",
+                       "build"
+                   ]
+    },
+    {
+        "case":  "replica-replica startup",
+        "pass":  true,
+        "expected_failure":  true,
+        "observed_failure":  true,
+        "message":  "Injected checked native failure: replica startup",
+        "events":  [
+                       "writers-stopped",
+                       "SQL mysql",
+                       "SQL mysql",
+                       "replica startup",
+                       "primary fallback recreate"
+                   ]
+    },
+    {
+        "case":  "replica-replica dump",
+        "pass":  true,
+        "expected_failure":  true,
+        "observed_failure":  true,
+        "message":  "Injected checked native failure: replica dump",
+        "events":  [
+                       "writers-stopped",
+                       "SQL mysql",
+                       "SQL mysql",
+                       "replica startup",
+                       "SQL mysql-replica",
+                       "SQL mysql-replica",
+                       "SQL mysql-replica",
+                       "SQL mysql-replica",
+                       "SQL mysql",
+                       "replica dump",
+                       "primary fallback recreate"
+                   ]
+    },
+    {
+        "case":  "replica-replica import",
+        "pass":  true,
+        "expected_failure":  true,
+        "observed_failure":  true,
+        "message":  "Injected checked native failure: replica import",
+        "events":  [
+                       "writers-stopped",
+                       "SQL mysql",
+                       "SQL mysql",
+                       "replica startup",
+                       "SQL mysql-replica",
+                       "SQL mysql-replica",
+                       "SQL mysql-replica",
+                       "SQL mysql-replica",
+                       "SQL mysql",
+                       "replica dump",
+                       "SQL mysql-replica",
+                       "replica import",
+                       "primary fallback recreate"
+                   ]
+    },
+    {
+        "case":  "replica-replication-configure",
+        "pass":  true,
+        "expected_failure":  true,
+        "observed_failure":  true,
+        "message":  "Injected replication configure failure",
+        "events":  [
+                       "writers-stopped",
+                       "SQL mysql",
+                       "SQL mysql",
+                       "replica startup",
+                       "SQL mysql-replica",
+                       "SQL mysql-replica",
+                       "SQL mysql-replica",
+                       "SQL mysql-replica",
+                       "SQL mysql",
+                       "replica dump",
+                       "SQL mysql-replica",
+                       "replica import",
+                       "SQL mysql-replica",
+                       "primary fallback recreate"
+                   ]
+    },
+    {
+        "case":  "replica-replica-missing-schema",
+        "pass":  true,
+        "expected_failure":  true,
+        "observed_failure":  true,
+        "message":  "Injected missing replica schema",
+        "events":  [
+                       "writers-stopped",
+                       "SQL mysql",
+                       "SQL mysql",
+                       "replica startup",
+                       "SQL mysql-replica",
+                       "SQL mysql-replica",
+                       "SQL mysql-replica",
+                       "SQL mysql-replica",
+                       "SQL mysql",
+                       "replica dump",
+                       "SQL mysql-replica",
+                       "replica import",
+                       "SQL mysql-replica",
+                       "SQL mysql-replica",
+                       "primary fallback recreate"
+                   ]
+    },
+    {
+        "case":  "replica-replica routing recreate",
+        "pass":  true,
+        "expected_failure":  true,
+        "observed_failure":  true,
+        "message":  "Injected checked native failure: replica routing recreate",
+        "events":  [
+                       "writers-stopped",
+                       "SQL mysql",
+                       "SQL mysql",
+                       "replica startup",
+                       "SQL mysql-replica",
+                       "SQL mysql-replica",
+                       "SQL mysql-replica",
+                       "SQL mysql-replica",
+                       "SQL mysql",
+                       "replica dump",
+                       "SQL mysql-replica",
+                       "replica import",
+                       "SQL mysql-replica",
+                       "SQL mysql-replica",
+                       "SQL mysql-replica",
+                       "replica routing recreate",
+                       "primary fallback recreate"
+                   ]
+    },
+    {
+        "case":  "replica-route-and-fallback",
+        "pass":  true,
+        "expected_failure":  true,
+        "observed_failure":  true,
+        "message":  "Injected recreate failure: primary fallback recreate",
+        "events":  [
+                       "writers-stopped",
+                       "SQL mysql",
+                       "SQL mysql",
+                       "replica startup",
+                       "SQL mysql-replica",
+                       "SQL mysql-replica",
+                       "SQL mysql-replica",
+                       "SQL mysql-replica",
+                       "SQL mysql",
+                       "replica dump",
+                       "SQL mysql-replica",
+                       "replica import",
+                       "SQL mysql-replica",
+                       "SQL mysql-replica",
+                       "SQL mysql-replica",
+                       "replica routing recreate",
+                       "primary fallback recreate",
+                       "stop unsafe app"
+                   ]
+    },
+    {
+        "case":  "backup-MySQL dump",
+        "pass":  true,
+        "expected_failure":  true,
+        "observed_failure":  true,
+        "message":  "Injected checked native failure: MySQL dump",
+        "events":  [
+                       "writers-stopped",
+                       "MySQL dump"
+                   ]
+    },
+    {
+        "case":  "backup-PostgreSQL dump",
+        "pass":  true,
+        "expected_failure":  true,
+        "observed_failure":  true,
+        "message":  "Injected checked native failure: PostgreSQL dump",
+        "events":  [
+                       "writers-stopped",
+                       "MySQL dump",
+                       "PostgreSQL dump",
+                       "dump cleanup"
+                   ]
+    },
+    {
+        "case":  "backup-PostgreSQL dump copy",
+        "pass":  true,
+        "expected_failure":  true,
+        "observed_failure":  true,
+        "message":  "Injected checked native failure: PostgreSQL dump copy",
+        "events":  [
+                       "writers-stopped",
+                       "MySQL dump",
+                       "PostgreSQL dump",
+                       "PostgreSQL dump copy",
+                       "dump cleanup"
+                   ]
+    },
+    {
+        "case":  "backup-dump cleanup",
+        "pass":  true,
+        "expected_failure":  true,
+        "observed_failure":  true,
+        "message":  "Injected checked native failure: dump cleanup",
+        "events":  [
+                       "writers-stopped",
+                       "MySQL dump",
+                       "PostgreSQL dump",
+                       "PostgreSQL dump copy",
+                       "dump cleanup"
+                   ]
+    },
+    {
+        "case":  "backup-resume backup writer",
+        "pass":  true,
+        "expected_failure":  true,
+        "observed_failure":  true,
+        "message":  "Injected checked native failure: resume backup writer",
+        "events":  [
+                       "writers-stopped",
+                       "MySQL dump",
+                       "PostgreSQL dump",
+                       "PostgreSQL dump copy",
+                       "dump cleanup",
+                       "resume backup writer"
+                   ]
+    },
+    {
+        "case":  "writer-inventory-paused",
+        "pass":  true,
+        "expected_failure":  true,
+        "observed_failure":  true,
+        "message":  "Writer in an unsafe transitional state; stabilize it before snapshot.",
+        "events":  [
+
+                   ]
+    },
+    {
+        "case":  "writer-inventory-malformed",
+        "pass":  true,
+        "expected_failure":  true,
+        "observed_failure":  true,
+        "message":  "Writer inventory is incomplete; refusing snapshot.",
+        "events":  [
+
+                   ]
+    }
+]

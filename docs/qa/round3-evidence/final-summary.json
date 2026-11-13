@@ -1,0 +1,38 @@
+{
+  "completed_at": "2026-11-13T19:01:37.8973581+03:00",
+  "branch": "codex/integrate-requirement-3-performance",
+  "suites": {
+    "integration": {
+      "cases": 15,
+      "passed": 15,
+      "failed": 0
+    },
+    "fault_ps51": {
+      "cases": 46,
+      "passed": 46,
+      "failed": 0
+    },
+    "fault_ps7": {
+      "cases": 46,
+      "passed": 46,
+      "failed": 0
+    },
+    "native_ps51": {
+      "cases": 5,
+      "passed": 5,
+      "failed": 0
+    },
+    "postgres": {
+      "cases": 3,
+      "passed": 3,
+      "failed": 0
+    },
+    "syntax_ps51": {
+      "files": 24,
+      "failed": 0
+    }
+  },
+  "resources_cleaned": true,
+  "committed": false,
+  "pushed": false
+}

@@ -1,0 +1,23 @@
+# Root build context is used by inventory-service/Dockerfile.
+.git
+.gitignore
+**/.env
+**/.env.*
+!**/.env.example
+!**/.env.perf.example
+**/vendor
+**/node_modules
+**/target
+**/.phpunit.result.cache
+phase0-review.zip
+docs
+adversarial-qa
+postman
+*.postman_collection.json
+Auth.postman_collection.json
+Ecommerce.postman_collection.json
+Ecommerce.Frontend.postman_collection.json
+main-app/laravel/storage/logs/**
+main-app/laravel/storage/framework/**
+main-app/laravel/bootstrap/cache/*.php
+scripts

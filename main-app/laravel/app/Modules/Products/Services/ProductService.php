@@ -5,6 +5,7 @@ namespace App\Modules\Products\Services;
 use App\Modules\Inventory\Exceptions\InventoryServiceException;
 use App\Modules\Inventory\Services\InventoryGrpcClient;
 use App\Modules\Products\Models\Product;
+use App\Support\Performance\CatalogCache;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -16,26 +17,44 @@ use Throwable;
 class ProductService
 {
     public function __construct(
-        private InventoryGrpcClient $inventoryClient
+        private InventoryGrpcClient $inventoryClient,
+        private CatalogCache $catalogCache,
     ) {}
 
     public function getAll(?int $categoryId, int $perPage = 12): LengthAwarePaginator
     {
-        return Product::query()
+        $page = max(1, (int) request()->input('page', 1));
+
+        $resolve = fn (): LengthAwarePaginator => Product::query()
+            ->useWritePdo()
             ->published()
-            ->with('category')
+            ->with(['category' => fn ($category) => $category->useWritePdo()])
             ->when($categoryId, function ($query) use ($categoryId) {
                 $query->where('category_id', $categoryId);
             })
             ->latest()
             ->orderByDesc('id')
-            ->paginate($perPage);
+            ->paginate($perPage, ['*'], 'page', $page);
+
+        if (! config('perf.catalog_cache_enabled')) {
+            return $resolve();
+        }
+
+        return $this->catalogCache->productsList($categoryId, $perPage, $page, $resolve);
     }
 
     public function findById(int $id): Product
     {
-        $product = Product::published()->with('category')->findOrFail($id);
-        $product->available_quantity = $this->inventoryClient->getStock($product->id);
+        // Conditional validators must use committed primary fields and relations.
+        $product = Product::query()
+            ->useWritePdo()
+            ->published()
+            ->with(['category' => fn ($category) => $category->useWritePdo()])
+            ->findOrFail($id);
+        $product->setAttribute(
+            'available_quantity',
+            $this->inventoryClient->getStock($product->id)
+        );
 
         return $product;
     }
@@ -59,7 +78,7 @@ class ProductService
                 hash_file('sha256', $image->getPathname()),
             ], JSON_THROW_ON_ERROR));
 
-            $product = Product::withTrashed()->where('creation_key', $creationKey)->first();
+            $product = Product::withTrashed()->useWritePdo()->where('creation_key', $creationKey)->first();
             if ($product !== null) {
                 return $this->completeCreation($product, $fingerprint);
             }
@@ -76,8 +95,8 @@ class ProductService
 
         try {
             $product = $creationKey === null
-                ? Product::create($attributes)
-                : Product::withTrashed()->createOrFirst(['creation_key' => $creationKey], $attributes);
+                ? $this->catalogCache->mutate(fn () => Product::create($attributes))
+                : $this->catalogCache->mutate(fn () => Product::withTrashed()->createOrFirst(['creation_key' => $creationKey], $attributes));
         } catch (Throwable $exception) {
             Storage::disk('public')->delete($imagePath);
             throw $exception;
@@ -95,7 +114,7 @@ class ProductService
         $newImagePath = null;
 
         try {
-            [$product, $oldImagePath] = DB::transaction(function () use ($id, $data, &$newImagePath) {
+            $product = $this->catalogCache->mutate(function () use ($id, $data, &$newImagePath) {
                 $product = Product::published()->lockForUpdate()->findOrFail($id);
                 $oldImagePath = $product->image_path;
 
@@ -105,9 +124,15 @@ class ProductService
                     unset($data['image']);
                 }
 
-                $product->update($data);
+                if (! $product->update($data)) {
+                    throw new RuntimeException('The product could not be saved.');
+                }
 
-                return [$product->load('category'), $oldImagePath];
+                if ($newImagePath !== null && $newImagePath !== $oldImagePath) {
+                    DB::afterCommit(fn () => $this->deleteUnusedImage($oldImagePath));
+                }
+
+                return $product->load('category');
             });
         } catch (Throwable $exception) {
             if ($newImagePath !== null) {
@@ -117,8 +142,10 @@ class ProductService
             throw $exception;
         }
 
-        if ($newImagePath !== null && $newImagePath !== $oldImagePath) {
-            $this->deleteUnusedImage($oldImagePath);
+        if ($newImagePath !== null && DB::transactionLevel() > 0) {
+            // Register on the caller's still-open transaction, after our savepoint
+            // commits. Rollback callbacks on committed savepoints are discarded.
+            DB::afterRollBack(fn () => $this->deleteUnusedImage($newImagePath));
         }
 
         return $product;
@@ -126,14 +153,14 @@ class ProductService
 
     public function delete(int $id): void
     {
-        $imagePath = DB::transaction(function () use ($id) {
+        $this->catalogCache->mutate(function () use ($id) {
             $product = Product::published()->lockForUpdate()->findOrFail($id);
-            $product->delete();
+            if (! $product->delete()) {
+                throw new RuntimeException('The product could not be deleted.');
+            }
 
-            return $product->image_path;
+            DB::afterCommit(fn () => $this->deleteUnusedImage($product->image_path));
         });
-
-        $this->deleteUnusedImage($imagePath);
     }
 
     private function storeImage(UploadedFile $image): string
@@ -149,7 +176,7 @@ class ProductService
     private function deleteUnusedImage(string $path): void
     {
         try {
-            if (!Product::where('image_path', $path)->exists() && !Storage::disk('public')->delete($path)) {
+            if (!Product::useWritePdo()->where('image_path', $path)->exists() && !Storage::disk('public')->delete($path)) {
                 Log::warning('Could not remove product image.', ['path' => $path]);
             }
         } catch (Throwable $exception) {
@@ -164,7 +191,7 @@ class ProductService
 
         $this->finishInitialStock($product);
 
-        return $product->load('category');
+        return $product->load(['category' => fn ($category) => $category->useWritePdo()]);
     }
 
     public function finishInitialStock(Product $product): void
@@ -181,6 +208,10 @@ class ProductService
             fn (Throwable $exception) => $exception instanceof InventoryServiceException,
         );
 
-        $product->update(['pending_initial_quantity' => null]);
+        $this->catalogCache->mutate(function () use ($product) {
+            if (! $product->update(['pending_initial_quantity' => null])) {
+                throw new RuntimeException('The product could not be published.');
+            }
+        });
     }
 }
