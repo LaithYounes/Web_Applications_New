@@ -59,6 +59,19 @@ class OrderNotificationRecorder
             if (! $inserted) {
                 return;
             }
+            if ($type === OrderNotificationType::Created) {
+
+                $now = now();
+
+                $connection->table('order_email_outbox')->insert([
+                    'message_id' => (string) Str::uuid(),
+                    'event_id' => $event->id,
+                    'order_id' => $order->id,
+                    'recipient_email' => $user->email,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ]);
+            }
             $notification = OrderNotification::on($connection->getName())->where('notification_id', $id)->firstOrFail();
             // This queue always uses the SAME PDO connection and transaction. It
             // deliberately ignores QUEUE_CONNECTION=sync and never uses afterCommit.

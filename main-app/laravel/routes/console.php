@@ -10,6 +10,11 @@ use Illuminate\Support\Facades\Schedule;
 
 Schedule::command('orders:recover-checkouts')->everyMinute()->withoutOverlapping(10);
 
+Schedule::command('orders:publish-emails')
+    ->everyFiveSeconds()
+    ->withoutOverlapping(5)
+    ->runInBackground();
+
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
@@ -28,3 +33,5 @@ Artisan::command('products:retry-initial-stock', function (ProductService $produ
 
     return $failed ? 1 : 0;
 })->purpose('Retry stock initialization for products awaiting publication');
+
+

@@ -12,6 +12,7 @@ RUN apt-get update && apt-get install -y \
     pdo_mysql \
     bcmath \
     pcntl \
+    sockets \
     intl \
     zip \
     && pecl install protobuf \
