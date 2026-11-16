@@ -93,6 +93,18 @@
       "type": "string"
     },
     {
+      "key": "orderEmailFailureId",
+      "value": "",
+      "description": "Email delivery ID saved by List failed order emails. This is not orderId. Cleared when the list has no usable result.",
+      "type": "string"
+    },
+    {
+      "key": "orderEmailFailureOrderId",
+      "value": "",
+      "description": "Optional positive order ID filter. Set this value and enable order_id in the failed-email list Params.",
+      "type": "string"
+    },
+    {
       "key": "cancelOrderId",
       "value": "",
       "description": "Test order ID saved by Place order. Use an order that belongs to the signed-in customer.",
@@ -5076,6 +5088,610 @@
               ],
               "cookie": [],
               "body": "{\n  \"success\": false,\n  \"message\": \"The inventory service is temporarily unavailable.\",\n  \"data\": null,\n  \"errors\": null\n}"
+            }
+          ]
+        },
+        {
+          "name": "Order email failures",
+          "description": "Admin-only, read-only monitoring of failed order confirmation emails.\n\n1. Log in as administrator in 01 Authentication to populate adminToken.\n2. Send List failed order emails. It saves the first result's delivery ID in orderEmailFailureId.\n3. Send Get failed order email details. Choose another delivery ID from the list when needed.\n4. Optional: set orderEmailFailureOrderId and enable order_id in the list Params.\n\nWith no failed tasks, the list returns data: [] and the details request is skipped until an ID is selected. These requests do not create orders, simulate SMTP faults, consume DLQ messages, or resend emails. Saved examples use synthetic customer details and token variables.\n\nThe backend API reads status=failed in order_email_deliveries joined with order_email_outbox. It is not a RabbitMQ queue browser. Technical investigation and email replay remain separate operational work.",
+          "item": [
+            {
+              "name": "List failed order emails",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.collectionVariables.set(\"orderEmailFailureId\", \"\");",
+                      "if (pm.response.code === 200) {",
+                      "  const rows = pm.response.json().data;",
+                      "  if (Array.isArray(rows) && rows.length && Number.isSafeInteger(rows[0].id) && rows[0].id > 0) {",
+                      "    pm.collectionVariables.set(\"orderEmailFailureId\", String(rows[0].id));",
+                      "  }",
+                      "}"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{adminToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/admin/order-email-failures?per_page=20&page=1",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "admin",
+                    "order-email-failures"
+                  ],
+                  "query": [
+                    {
+                      "key": "per_page",
+                      "value": "20",
+                      "description": "Results per page: 1 to 100; default 20."
+                    },
+                    {
+                      "key": "page",
+                      "value": "1",
+                      "description": "Page number: 1 to 1000000."
+                    },
+                    {
+                      "key": "order_id",
+                      "value": "{{orderEmailFailureOrderId}}",
+                      "description": "Optional positive order ID. Set the variable and enable this parameter to filter.",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "List failed order email tasks, newest failure first, with a stable delivery ID tie-break. Requires an admin JWT from Log in as administrator.\n\nReturns data, links, meta, success, and message. An empty list is a normal 200 response. per_page is 1..100 and page is 1..1000000. To filter by order, set orderEmailFailureOrderId to a positive order ID and enable order_id in Params; leave it disabled to list all failures.\n\nThe post-response script saves the first returned task's id as orderEmailFailureId for Get failed order email details. It clears the previous ID when no task is available or the request fails. You can set a different returned task ID manually.\n\nEach item contains id (EMAIL DELIVERY ID, not order_id), message_id, order_id, recipient_email, status, attempts, failure_message, failed_at, created_at, and updated_at. Timestamps are UTC ISO 8601. The failure message is a generic summary; raw last_error is not exposed.\n\nThis endpoint reads failed delivery records from MySQL. It does not consume, acknowledge, or remove RabbitMQ messages and is not a complete listing of malformed messages in the DLQ. Some failures may not have delivery records. Email replay is not implemented.\n\n401: missing/invalid authentication. 403: customer token or another non-admin role. 422: invalid pagination or order_id."
+              },
+              "response": [
+                {
+                  "name": "200 Failed order emails",
+                  "originalRequest": {
+                    "method": "GET",
+                    "header": [
+                      {
+                        "key": "Accept",
+                        "value": "application/json"
+                      }
+                    ],
+                    "auth": {
+                      "type": "bearer",
+                      "bearer": [
+                        {
+                          "key": "token",
+                          "value": "{{adminToken}}",
+                          "type": "string"
+                        }
+                      ]
+                    },
+                    "url": {
+                      "raw": "{{baseUrl}}/api/v1/admin/order-email-failures?per_page=20&page=1",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "api",
+                        "v1",
+                        "admin",
+                        "order-email-failures"
+                      ],
+                      "query": [
+                        {
+                          "key": "per_page",
+                          "value": "20",
+                          "description": "Results per page: 1 to 100; default 20."
+                        },
+                        {
+                          "key": "page",
+                          "value": "1",
+                          "description": "Page number: 1 to 1000000."
+                        },
+                        {
+                          "key": "order_id",
+                          "value": "{{orderEmailFailureOrderId}}",
+                          "description": "Optional positive order ID. Set the variable and enable this parameter to filter.",
+                          "disabled": true
+                        }
+                      ]
+                    }
+                  },
+                  "status": "OK",
+                  "code": 200,
+                  "_postman_previewlanguage": "json",
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
+                  "cookie": [],
+                  "body": "{\n  \"data\": [\n    {\n      \"id\": 5,\n      \"message_id\": \"11111111-1111-4111-8111-111111111111\",\n      \"order_id\": 17,\n      \"recipient_email\": \"customer@example.test\",\n      \"status\": \"failed\",\n      \"attempts\": 5,\n      \"failure_message\": \"Email processing failed. Technical review is required.\",\n      \"failed_at\": \"2026-11-16T06:19:08.000000Z\",\n      \"created_at\": \"2026-11-16T06:17:07.000000Z\",\n      \"updated_at\": \"2026-11-16T06:19:08.000000Z\"\n    }\n  ],\n  \"links\": {\n    \"first\": \"http://localhost:8000/api/v1/admin/order-email-failures?per_page=20&page=1\",\n    \"last\": \"http://localhost:8000/api/v1/admin/order-email-failures?per_page=20&page=1\",\n    \"prev\": null,\n    \"next\": null\n  },\n  \"meta\": {\n    \"current_page\": 1,\n    \"from\": 1,\n    \"last_page\": 1,\n    \"links\": [\n      {\n        \"url\": null,\n        \"label\": \"&laquo; Previous\",\n        \"page\": null,\n        \"active\": false\n      },\n      {\n        \"url\": \"http://localhost:8000/api/v1/admin/order-email-failures?per_page=20&page=1\",\n        \"label\": \"1\",\n        \"page\": 1,\n        \"active\": true\n      },\n      {\n        \"url\": null,\n        \"label\": \"Next &raquo;\",\n        \"page\": null,\n        \"active\": false\n      }\n    ],\n    \"path\": \"http://localhost:8000/api/v1/admin/order-email-failures\",\n    \"per_page\": 20,\n    \"to\": 1,\n    \"total\": 1\n  },\n  \"success\": true,\n  \"message\": \"Failed order emails retrieved successfully\"\n}"
+                },
+                {
+                  "name": "200 No failed order emails",
+                  "originalRequest": {
+                    "method": "GET",
+                    "header": [
+                      {
+                        "key": "Accept",
+                        "value": "application/json"
+                      }
+                    ],
+                    "auth": {
+                      "type": "bearer",
+                      "bearer": [
+                        {
+                          "key": "token",
+                          "value": "{{adminToken}}",
+                          "type": "string"
+                        }
+                      ]
+                    },
+                    "url": {
+                      "raw": "{{baseUrl}}/api/v1/admin/order-email-failures?per_page=20&page=1",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "api",
+                        "v1",
+                        "admin",
+                        "order-email-failures"
+                      ],
+                      "query": [
+                        {
+                          "key": "per_page",
+                          "value": "20",
+                          "description": "Results per page: 1 to 100; default 20."
+                        },
+                        {
+                          "key": "page",
+                          "value": "1",
+                          "description": "Page number: 1 to 1000000."
+                        },
+                        {
+                          "key": "order_id",
+                          "value": "{{orderEmailFailureOrderId}}",
+                          "description": "Optional positive order ID. Set the variable and enable this parameter to filter.",
+                          "disabled": true
+                        }
+                      ]
+                    }
+                  },
+                  "status": "OK",
+                  "code": 200,
+                  "_postman_previewlanguage": "json",
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
+                  "cookie": [],
+                  "body": "{\n  \"data\": [],\n  \"links\": {\n    \"first\": \"http://localhost:8000/api/v1/admin/order-email-failures?per_page=20&page=1\",\n    \"last\": \"http://localhost:8000/api/v1/admin/order-email-failures?per_page=20&page=1\",\n    \"prev\": null,\n    \"next\": null\n  },\n  \"meta\": {\n    \"current_page\": 1,\n    \"from\": null,\n    \"last_page\": 1,\n    \"links\": [\n      {\n        \"url\": null,\n        \"label\": \"&laquo; Previous\",\n        \"page\": null,\n        \"active\": false\n      },\n      {\n        \"url\": \"http://localhost:8000/api/v1/admin/order-email-failures?per_page=20&page=1\",\n        \"label\": \"1\",\n        \"page\": 1,\n        \"active\": true\n      },\n      {\n        \"url\": null,\n        \"label\": \"Next &raquo;\",\n        \"page\": null,\n        \"active\": false\n      }\n    ],\n    \"path\": \"http://localhost:8000/api/v1/admin/order-email-failures\",\n    \"per_page\": 20,\n    \"to\": null,\n    \"total\": 0\n  },\n  \"success\": true,\n  \"message\": \"Failed order emails retrieved successfully\"\n}"
+                },
+                {
+                  "name": "401 Authentication required",
+                  "originalRequest": {
+                    "method": "GET",
+                    "header": [
+                      {
+                        "key": "Accept",
+                        "value": "application/json"
+                      }
+                    ],
+                    "auth": {
+                      "type": "noauth"
+                    },
+                    "url": {
+                      "raw": "{{baseUrl}}/api/v1/admin/order-email-failures?per_page=20&page=1",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "api",
+                        "v1",
+                        "admin",
+                        "order-email-failures"
+                      ],
+                      "query": [
+                        {
+                          "key": "per_page",
+                          "value": "20",
+                          "description": "Results per page: 1 to 100; default 20."
+                        },
+                        {
+                          "key": "page",
+                          "value": "1",
+                          "description": "Page number: 1 to 1000000."
+                        },
+                        {
+                          "key": "order_id",
+                          "value": "{{orderEmailFailureOrderId}}",
+                          "description": "Optional positive order ID. Set the variable and enable this parameter to filter.",
+                          "disabled": true
+                        }
+                      ]
+                    }
+                  },
+                  "status": "Unauthorized",
+                  "code": 401,
+                  "_postman_previewlanguage": "json",
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
+                  "cookie": [],
+                  "body": "{\n  \"success\": false,\n  \"message\": \"Authentication is required\",\n  \"data\": null,\n  \"errors\": null\n}"
+                },
+                {
+                  "name": "403 Admin role required",
+                  "originalRequest": {
+                    "method": "GET",
+                    "header": [
+                      {
+                        "key": "Accept",
+                        "value": "application/json"
+                      }
+                    ],
+                    "auth": {
+                      "type": "bearer",
+                      "bearer": [
+                        {
+                          "key": "token",
+                          "value": "{{customerToken}}",
+                          "type": "string"
+                        }
+                      ]
+                    },
+                    "url": {
+                      "raw": "{{baseUrl}}/api/v1/admin/order-email-failures?per_page=20&page=1",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "api",
+                        "v1",
+                        "admin",
+                        "order-email-failures"
+                      ],
+                      "query": [
+                        {
+                          "key": "per_page",
+                          "value": "20",
+                          "description": "Results per page: 1 to 100; default 20."
+                        },
+                        {
+                          "key": "page",
+                          "value": "1",
+                          "description": "Page number: 1 to 1000000."
+                        },
+                        {
+                          "key": "order_id",
+                          "value": "{{orderEmailFailureOrderId}}",
+                          "description": "Optional positive order ID. Set the variable and enable this parameter to filter.",
+                          "disabled": true
+                        }
+                      ]
+                    }
+                  },
+                  "status": "Forbidden",
+                  "code": 403,
+                  "_postman_previewlanguage": "json",
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
+                  "cookie": [],
+                  "body": "{\n  \"success\": false,\n  \"message\": \"You are not authorized to perform this action\",\n  \"data\": null,\n  \"errors\": null\n}"
+                },
+                {
+                  "name": "422 Invalid pagination",
+                  "originalRequest": {
+                    "method": "GET",
+                    "header": [
+                      {
+                        "key": "Accept",
+                        "value": "application/json"
+                      }
+                    ],
+                    "auth": {
+                      "type": "bearer",
+                      "bearer": [
+                        {
+                          "key": "token",
+                          "value": "{{adminToken}}",
+                          "type": "string"
+                        }
+                      ]
+                    },
+                    "url": {
+                      "raw": "{{baseUrl}}/api/v1/admin/order-email-failures?per_page=0",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "api",
+                        "v1",
+                        "admin",
+                        "order-email-failures"
+                      ],
+                      "query": [
+                        {
+                          "key": "per_page",
+                          "value": "0"
+                        }
+                      ]
+                    }
+                  },
+                  "status": "Unprocessable Content",
+                  "code": 422,
+                  "_postman_previewlanguage": "json",
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
+                  "cookie": [],
+                  "body": "{\n  \"success\": false,\n  \"message\": \"The provided data is invalid.\",\n  \"data\": null,\n  \"errors\": {\n    \"per_page\": [\n      \"The per page field must be at least 1.\"\n    ]\n  }\n}"
+                }
+              ]
+            },
+            {
+              "name": "Get failed order email details",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const failureId = String(pm.variables.get(\"orderEmailFailureId\") || \"\").trim();",
+                      "if (!/^[1-9]\\d*$/.test(failureId)) {",
+                      "  console.warn(\"Run List failed order emails first, or set orderEmailFailureId to a positive delivery ID. An empty list has no details to load.\");",
+                      "  pm.execution.skipRequest();",
+                      "}"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{adminToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/admin/order-email-failures/{{orderEmailFailureId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "admin",
+                    "order-email-failures",
+                    "{{orderEmailFailureId}}"
+                  ]
+                },
+                "description": "Read one failed order email task using its DELIVERY ID. Run List failed order emails first to populate orderEmailFailureId, or set that variable to an id returned in the list. Do not use order_id or message_id in this path.\n\nReturns success, message, and one data object with the same task fields as the list. The pre-request script skips sending when orderEmailFailureId is unset or is not a positive integer; see the Postman Console for the instruction.\n\nRequires an admin JWT. 401: missing/invalid authentication. 403: non-admin role. 404: the delivery does not exist or is no longer failed. Refresh the list after a 404. This request only reads MySQL and does not remove a message from the DLQ or resend an email."
+              },
+              "response": [
+                {
+                  "name": "200 Failed order email details",
+                  "originalRequest": {
+                    "method": "GET",
+                    "header": [
+                      {
+                        "key": "Accept",
+                        "value": "application/json"
+                      }
+                    ],
+                    "auth": {
+                      "type": "bearer",
+                      "bearer": [
+                        {
+                          "key": "token",
+                          "value": "{{adminToken}}",
+                          "type": "string"
+                        }
+                      ]
+                    },
+                    "url": {
+                      "raw": "{{baseUrl}}/api/v1/admin/order-email-failures/5",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "api",
+                        "v1",
+                        "admin",
+                        "order-email-failures",
+                        "5"
+                      ]
+                    }
+                  },
+                  "status": "OK",
+                  "code": 200,
+                  "_postman_previewlanguage": "json",
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
+                  "cookie": [],
+                  "body": "{\n  \"data\": {\n    \"id\": 5,\n    \"message_id\": \"11111111-1111-4111-8111-111111111111\",\n    \"order_id\": 17,\n    \"recipient_email\": \"customer@example.test\",\n    \"status\": \"failed\",\n    \"attempts\": 5,\n    \"failure_message\": \"Email processing failed. Technical review is required.\",\n    \"failed_at\": \"2026-11-16T06:19:08.000000Z\",\n    \"created_at\": \"2026-11-16T06:17:07.000000Z\",\n    \"updated_at\": \"2026-11-16T06:19:08.000000Z\"\n  },\n  \"success\": true,\n  \"message\": \"Failed order email retrieved successfully\"\n}"
+                },
+                {
+                  "name": "401 Authentication required",
+                  "originalRequest": {
+                    "method": "GET",
+                    "header": [
+                      {
+                        "key": "Accept",
+                        "value": "application/json"
+                      }
+                    ],
+                    "auth": {
+                      "type": "noauth"
+                    },
+                    "url": {
+                      "raw": "{{baseUrl}}/api/v1/admin/order-email-failures/5",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "api",
+                        "v1",
+                        "admin",
+                        "order-email-failures",
+                        "5"
+                      ]
+                    }
+                  },
+                  "status": "Unauthorized",
+                  "code": 401,
+                  "_postman_previewlanguage": "json",
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
+                  "cookie": [],
+                  "body": "{\n  \"success\": false,\n  \"message\": \"Authentication is required\",\n  \"data\": null,\n  \"errors\": null\n}"
+                },
+                {
+                  "name": "403 Admin role required",
+                  "originalRequest": {
+                    "method": "GET",
+                    "header": [
+                      {
+                        "key": "Accept",
+                        "value": "application/json"
+                      }
+                    ],
+                    "auth": {
+                      "type": "bearer",
+                      "bearer": [
+                        {
+                          "key": "token",
+                          "value": "{{customerToken}}",
+                          "type": "string"
+                        }
+                      ]
+                    },
+                    "url": {
+                      "raw": "{{baseUrl}}/api/v1/admin/order-email-failures/5",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "api",
+                        "v1",
+                        "admin",
+                        "order-email-failures",
+                        "5"
+                      ]
+                    }
+                  },
+                  "status": "Forbidden",
+                  "code": 403,
+                  "_postman_previewlanguage": "json",
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
+                  "cookie": [],
+                  "body": "{\n  \"success\": false,\n  \"message\": \"You are not authorized to perform this action\",\n  \"data\": null,\n  \"errors\": null\n}"
+                },
+                {
+                  "name": "404 Delivery missing or no longer failed",
+                  "originalRequest": {
+                    "method": "GET",
+                    "header": [
+                      {
+                        "key": "Accept",
+                        "value": "application/json"
+                      }
+                    ],
+                    "auth": {
+                      "type": "bearer",
+                      "bearer": [
+                        {
+                          "key": "token",
+                          "value": "{{adminToken}}",
+                          "type": "string"
+                        }
+                      ]
+                    },
+                    "url": {
+                      "raw": "{{baseUrl}}/api/v1/admin/order-email-failures/2147483647",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "api",
+                        "v1",
+                        "admin",
+                        "order-email-failures",
+                        "2147483647"
+                      ]
+                    }
+                  },
+                  "status": "Not Found",
+                  "code": 404,
+                  "_postman_previewlanguage": "json",
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
+                  "cookie": [],
+                  "body": "{\n  \"success\": false,\n  \"message\": \"The requested resource was not found.\",\n  \"data\": null,\n  \"errors\": null\n}"
+                }
+              ]
             }
           ]
         }
