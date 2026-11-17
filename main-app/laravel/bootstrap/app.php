@@ -21,6 +21,19 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
     )
+     ->withBroadcasting(
+        __DIR__.'/../routes/channels.php',
+        [
+            'prefix' => 'api/v1',
+
+            'middleware' => [
+                'api',
+                'auth:api',
+                \App\Http\Middleware\ValidateBroadcastSubscription::class,
+                'throttle:60,1',
+            ],
+        ]
+    )
     ->withMiddleware(function (Middleware $middleware): void {
     $middleware->alias([
         'role' => EnsureUserHasRole::class,

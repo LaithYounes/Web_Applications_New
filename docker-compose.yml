@@ -243,6 +243,43 @@ services:
       retries: 10
       start_period: 30s
 
+  reverb:
+    image: ecommerce2026-app
+    restart: unless-stopped
+    working_dir: /var/www
+
+    command:
+      - php
+      - artisan
+      - reverb:start
+      - --host=0.0.0.0
+      - --port=8080
+
+    ports:
+      - "127.0.0.1:8080:8080"
+
+    env_file:
+      - ./main-app/laravel/.env
+
+    environment:
+      DB_CONNECTION: mysql
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_DATABASE: ecommerce_main
+      DB_USERNAME: ecommerce_user
+      DB_PASSWORD: ecommerce_dev_password
+
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+    networks:
+      - ecommerce_network
+
+    volumes:
+      - ./main-app/laravel:/var/www
+      - laravel_vendor:/var/www/vendor
+
 volumes:
   mysql_data:
     name: ecommerce2026_mysql_data

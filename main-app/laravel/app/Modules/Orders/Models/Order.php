@@ -7,7 +7,8 @@ use App\Modules\Notifications\Services\OrderNotificationRecorder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-
+use App\Modules\Orders\Events\OrderCreated;
+use App\Modules\Orders\Events\OrderStatusUpdated;
 class Order extends Model
 {
     public const CANCELLING = 'cancelling';
@@ -58,7 +59,7 @@ class Order extends Model
         }
     }
 
-    private function recordStatusChange(?string $previous): void
+        private function recordStatusChange(?string $previous): void
     {
         $event = $this->statusHistory()->create([
             'from_status' => $previous,
@@ -67,7 +68,27 @@ class Order extends Model
             'actor_type' => $this->statusActor?->role ?? 'system',
             'changed_at' => now(),
         ]);
+
         app(OrderNotificationRecorder::class)->record($this, $event);
+
+        if ($previous === null && $event->to_status === 'pending') {
+            $broadcastEvent = new OrderCreated(
+                orderId: (int) $this->getKey(),
+                eventId: (int) $event->getKey(),
+            );
+        } elseif ($previous !== null) {
+            $broadcastEvent = new OrderStatusUpdated(
+                orderId: (int) $this->getKey(),
+                eventId: (int) $event->getKey(),
+                status: $event->to_status,
+            );
+        } else {
+            return;
+        }
+
+        $this->getConnection()->afterCommit(
+            static fn () => event($broadcastEvent)
+        );
     }
 
     public function user(): BelongsTo
