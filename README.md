@@ -1,6 +1,10 @@
-# Backend Setup for the Android Team
+# Everyday Tech
 
-Run the backend from PowerShell, then open your Android app in Android Studio. Your app uses the REST API on port `8000`. Docker runs Laravel, Spring Boot, and the databases.
+The Laravel app serves the storefront, customer account, and administration console. See the [web application README](docs/web-application.md) for setup, build commands, environment settings, and a demo walkthrough.
+
+## Backend setup for the Android team
+
+Run the backend from PowerShell, then open your Android app in Android Studio. The current Compose configuration exposes the REST API on port `8081`. Docker runs Laravel, Spring Boot, and the databases.
 
 ## 1. Get the project
 
@@ -23,8 +27,7 @@ Run each step in order. The first build can take several minutes because Docker 
 ```powershell
 $envFile = 'main-app/laravel/.env'
 if (-not (Test-Path -LiteralPath $envFile)) {
-    (Get-Content -LiteralPath "$envFile.example") -replace '^APP_URL=.*$', 'APP_URL=http://localhost:8000' |
-        Set-Content -LiteralPath $envFile -Encoding ascii
+    Copy-Item -LiteralPath "$envFile.example" -Destination $envFile
 }
 
 docker compose build
@@ -67,8 +70,8 @@ docker compose exec -T -e INVENTORY_GRPC_TIMEOUT=10000000 app php artisan db:see
 ## 3. Check the API from PowerShell
 
 ```powershell
-(Invoke-RestMethod 'http://localhost:8000/api/v1/health').data.status
-(Invoke-RestMethod 'http://localhost:8000/api/v1/products?per_page=5').meta.total
+(Invoke-RestMethod 'http://127.0.0.1:8081/api/v1/health').data.status
+(Invoke-RestMethod 'http://127.0.0.1:8081/api/v1/products?per_page=5').meta.total
 ```
 
 The first command should return `ok`. On a fresh database with demo data, the second command returns `15`. You can now open your Android app in Android Studio.
@@ -83,11 +86,11 @@ Both local demo accounts use the password `StoreDemo2026!`.
 ## 4. Connect the Android app
 
 1. Open your **Android app project** in Android Studio, sync Gradle, and start an emulator from **Device Manager**.
-2. In the emulator's browser, open `http://10.0.2.2:8000/api/v1/health`. Look for `ok` in `data.status`. The emulator uses `10.0.2.2` to reach your computer. [Android emulator networking](https://developer.android.com/studio/run/emulator-networking-address)
-3. Set the debug **base URL** to `http://10.0.2.2:8000/api/v1/`. Start with `GET products?per_page=5` and display the items in `data`.
+2. In the emulator's browser, open `http://10.0.2.2:8081/api/v1/health`. Look for `ok` in `data.status`. The emulator uses `10.0.2.2` to reach your computer. [Android emulator networking](https://developer.android.com/studio/run/emulator-networking-address)
+3. Set the debug **base URL** to `http://10.0.2.2:8081/api/v1/`. Start with `GET products?per_page=5` and display the items in `data`.
 4. Make sure your app's `AndroidManifest.xml` includes `<uses-permission android:name="android.permission.INTERNET" />` inside `<manifest>`. If you see `CLEARTEXT communication not permitted`, use the debug settings below. [Android network permissions](https://developer.android.com/develop/connectivity/network-ops/connecting)
 
-To test on a physical phone, enable **USB debugging**, connect the phone, and run `adb reverse tcp:8000 tcp:8000` in the terminal. Use `http://localhost:8000/api/v1/` as the base URL on the phone. If Android blocks HTTP, allow `localhost` in the debug build. [ADB reverse setup](https://developer.android.com/develop/ui/views/layout/webapps/access-local-server)
+To test on a physical phone, enable **USB debugging**, connect the phone, and run `adb reverse tcp:8081 tcp:8081` in the terminal. Use `http://localhost:8081/api/v1/` as the base URL on the phone. If Android blocks HTTP, allow `localhost` in the debug build. [ADB reverse setup](https://developer.android.com/develop/ui/views/layout/webapps/access-local-server)
 
 <details>
 <summary>Allow local HTTP in the debug build</summary>
@@ -132,6 +135,7 @@ Add the paths below to the base URL. Send `Accept: application/json` with each r
 | Cancel an order | `POST orders/{id}/cancel` | Send an empty body with a customer token. The customer can cancel their own pending order. On `200`, read the cancelled order from `data`. |
 
 After signing in, send `Authorization: Bearer <token>` with cart, order, and session requests. If a protected request returns `401`, sign in again. The [frontend Postman collection](Ecommerce.Frontend.postman_collection.json) has examples for registration, logout, and admin requests.
+Set the Postman collection's `baseUrl` to `http://127.0.0.1:8081` when using the current Compose configuration.
 
 Show the cancellation action on pending orders. If cancellation is interrupted, refresh order details and retry the same request. Order details show `cancellation_pending: true` while the inventory release is awaiting confirmation. Once the order is cancelled, a repeat returns `200` with status `cancelled`.
 
@@ -147,7 +151,7 @@ Use an admin bearer token for each request. Deleted and unpublished products ret
 
 **Product images in the emulator**
 
-A catalog image URL can start with `http://localhost:8000`. In the debug app, replace that part with `http://10.0.2.2:8000` and keep the rest of the URL. A cart item's image comes as a path such as `products/example.png`. Add `http://10.0.2.2:8000/storage/` before that path. The API returns prices and totals as strings such as `"25.00"`.
+A catalog image URL can use the host in Laravel's `APP_URL`. In the debug app, use `http://10.0.2.2:8081` for the emulator and keep the image path. A cart item's image comes as a path such as `products/example.png`. Add `http://10.0.2.2:8081/storage/` before that path. The API returns prices and totals as strings such as `"25.00"`.
 
 ## After the first run
 

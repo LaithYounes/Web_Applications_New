@@ -64,10 +64,7 @@ class OrderController extends Controller
         ]);
     }
 
-    public function updateStatus(
-        UpdateOrderStatusRequest $request,
-        int $id
-    ): JsonResponse {
+    public function updateStatus( UpdateOrderStatusRequest $request,int $id): JsonResponse {
         $order = $this->orderService->updateStatus(
             $id,
             $request->validated()['status'],

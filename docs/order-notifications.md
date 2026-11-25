@@ -1,6 +1,6 @@
 # Customer order notifications
 
-The backend stores the customer's inbox in the application database. Firebase is an additional push channel; local notifications work without credentials. There are no frontend/Android changes and JWT authentication is preserved.
+The backend stores the customer's inbox in the application database. The [storefront](web-application.md) reads the inbox through REST. Android can also receive Firebase push notifications. The inbox works without Firebase credentials, and the REST endpoints use JWT authentication.
 
 ## Events, transactions and uniqueness
 

@@ -75,8 +75,6 @@ class OrderService
 
     public function createOrder(User $user): Order
     {
-        // Commit the intent and immutable basket BEFORE calling another service.
-        // A timeout or process crash must not erase the identity of the operation.
         $checkout = DB::transaction(function () use ($user) {
             $cart = Cart::query()
                 ->where('user_id', $user->id)
@@ -95,7 +93,6 @@ class OrderService
             }
 
             $cartItems = $cart->items()
-                // Keep products available while saving the immutable checkout snapshot.
                 ->with(['product' => fn ($products) => $products->sharedLock()])
                 ->lockForUpdate()
                 ->get();
@@ -126,7 +123,6 @@ class OrderService
                     ]);
                 }
 
-                // Convert decimal price to integer cents to avoid float errors.
                 $priceParts = explode('.', (string) $product->price);
                 $whole = (int) ($priceParts[0] ?? 0);
                 $fraction = str_pad($priceParts[1] ?? '0', 2, '0');
@@ -158,19 +154,14 @@ class OrderService
 
     public function finishCheckout(string $reservationId, ?User $actor = null): Order
     {
-        // A missing intent is a business decision even when list reads may lag.
-        // Keep this preliminary lookup outside the transaction: an ordinary read
-        // inside it would establish a REPEATABLE READ snapshot before cart locking,
-        // hiding an order just completed by the worker we waited for.
+
         $checkout = PendingCheckout::useWritePdo()->find($reservationId);
         $result = DB::transaction(function () use ($reservationId, $checkout, $actor) {
             if (! $checkout) {
-                // Another worker may have finished this exact operation already.
                 return Order::with(['items', 'statusHistory'])->where('reservation_id', $reservationId)->first()
                     ?? new InventoryRejectedException('Checkout was rejected. Please retry checkout.');
             }
 
-            // All checkout and cart-write paths lock the cart first.
             $cart = Cart::lockForUpdate()->findOrFail($checkout->cart_id);
             $checkout = PendingCheckout::lockForUpdate()->find($reservationId);
             if (! $checkout) {
@@ -184,15 +175,12 @@ class OrderService
                     $checkout->order_items,
                 ));
             } catch (InventoryRejectedException $exception) {
-                // A definitive business rejection has no stock effect. Commit removal
-                // of the intent before surfacing the error so the cart is editable.
                 $checkout->delete();
 
                 return $exception;
             }
 
-            // Communication and local persistence errors leave the durable intent
-            // intact. Retrying ReserveStock with this ID has no second stock effect.
+
             $order = new Order([
                 'user_id' => $cart->user_id,
                 'status' => 'pending',
@@ -221,8 +209,7 @@ class OrderService
             ->lockForUpdate()
             ->findOrFail($orderId);
 
-        // Persist the intent before releasing stock. If the RPC response is lost,
-        // retries can finish the cancellation while confirmation stays blocked.
+
         DB::transaction(function () use ($lockedOrder, $user) {
             $order = $lockedOrder();
             if (! in_array($order->status, ['pending', Order::CANCELLING, 'cancelled'], true)) {

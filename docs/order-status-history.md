@@ -34,7 +34,7 @@ Use the frontend collection already in use:
 3. Change the status through the existing authenticated admin request, or cancel a pending order through the existing customer request.
 4. Send **Get my order details** again and check the previous/new statuses, actor, and timestamp.
 
-No frontend collection edits or new routes are required. The primary order status continues to present an in-progress customer cancellation as `pending` with `cancellation_pending: true`; history exposes the actual persisted `cancelling` stage. A frontend that displays history should account for that internal stage. The frontend implementation is outside this repository, so parser and screen behavior require verification in that project.
+The primary order status presents an in-progress customer cancellation as `pending` with `cancellation_pending: true`. History exposes the persisted `cancelling` stage. The [storefront](web-application.md) labels these states “Cancellation in progress” and “Cancellation requested.”
 
 ## Installation and boundaries
 
