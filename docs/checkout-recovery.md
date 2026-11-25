@@ -26,7 +26,7 @@ Existing routes and request bodies remain available. `GET /api/v1/cart` adds `da
 - While `checkout_pending` is true, cart mutations return `409`.
 - The existing frontend collection can exercise these routes without modification. The backend QA collection's deadline scenario documents fault setup and recovery checks.
 
-The frontend must tolerate additional JSON fields and show the pending state appropriately. Its implementation is maintained outside this repository and was not verified here.
+The [storefront](web-application.md) reads the cart and recent orders after an interrupted response. It locks cart edits while checkout is pending and lets the customer explicitly retry the stored attempt.
 
 ## Automatic recovery and operations
 

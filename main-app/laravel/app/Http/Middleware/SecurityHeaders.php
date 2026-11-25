@@ -34,8 +34,12 @@ class SecurityHeaders
 
         $response->headers->set(
             'Content-Security-Policy',
-            "default-src 'none'; frame-ancestors 'none'; base-uri 'none'"
+            $request->attributes->get(StorefrontHeaders::CSP_ATTRIBUTE, "default-src 'none'; frame-ancestors 'none'; base-uri 'none'")
         );
+
+        if ($request->is('api/browser/*')) {
+            $response->headers->set('Cache-Control', 'private, no-store');
+        }
 
         $response->headers->set(
             'X-XSS-Protection',

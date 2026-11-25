@@ -5,6 +5,8 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use App\Http\Middleware\EnsureUserHasRole;
+use App\Http\Middleware\BrowserSession;
+use Illuminate\Contracts\Auth\Middleware\AuthenticatesRequests;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -35,12 +37,17 @@ return Application::configure(basePath: dirname(__DIR__))
         ]
     )
     ->withMiddleware(function (Middleware $middleware): void {
+    $middleware->trustProxies(
+        at: ['172.30.250.2'],
+        headers: Request::HEADER_X_FORWARDED_FOR,
+    );
     $middleware->alias([
         'role' => EnsureUserHasRole::class,
     ]);
     $middleware->append(
         SecurityHeaders::class
     );
+    $middleware->prependToPriorityList(AuthenticatesRequests::class, BrowserSession::class);
 })
 
 ->withExceptions(function (Exceptions $exceptions): void {

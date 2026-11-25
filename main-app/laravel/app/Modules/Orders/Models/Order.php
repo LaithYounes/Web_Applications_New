@@ -34,8 +34,11 @@ class Order extends Model
     protected static function booted(): void
     {
         static::created(fn (Order $order) => $order->recordStatusChange(null));
+
         static::updated(function (Order $order): void {
-            if ($order->wasChanged('status')) {
+
+        if ($order->wasChanged('status'))
+            {
                 $order->recordStatusChange($order->getRawOriginal('status'));
             }
         });
@@ -51,8 +54,7 @@ class Order extends Model
     public function save(array $options = []): bool
     {
         try {
-            // The synchronous model events write history on this same connection.
-            // Even a direct Eloquent save must not persist a state without its audit.
+
             return $this->getConnection()->transaction(fn () => parent::save($options));
         } finally {
             $this->statusActor = null;
@@ -86,9 +88,7 @@ class Order extends Model
             return;
         }
 
-        $this->getConnection()->afterCommit(
-            static fn () => event($broadcastEvent)
-        );
+        $this->getConnection()->afterCommit(static fn () => event($broadcastEvent));
     }
 
     public function user(): BelongsTo

@@ -9,11 +9,14 @@ use App\Modules\Products\Models\Product;
 use App\Modules\Products\Services\ProductService;
 use Illuminate\Database\Seeder;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use RuntimeException;
 use Throwable;
 
 class DemoCatalogSeeder extends Seeder
 {
+    private const PHOTO_PRODUCTS = ['iphone15', 'logitechM185', 'sonyHeadphones', 'appleWatchSE'];
+
     private const CATALOG = [
         [
             'name' => 'Smartphones',
@@ -90,15 +93,22 @@ class DemoCatalogSeeder extends Seeder
                 ['name' => $entry['name']],
                 ['description' => $entry['description']],
             );
-            $image = __DIR__.'/fixtures/'.$entry['image'];
+            $placeholder = __DIR__.'/fixtures/'.$entry['image'];
 
             foreach ($entry['products'] as $identifier => [$name, $description, $price, $stock]) {
                 $key = self::creationKey($identifier);
                 $product = Product::withTrashed()->where('creation_key', $key)->first();
+                $hasPhoto = in_array($identifier, self::PHOTO_PRODUCTS, true);
+                $path = $hasPhoto ? __DIR__."/fixtures/{$identifier}.jpg" : $placeholder;
+                $image = new UploadedFile($path, basename($path), $hasPhoto ? 'image/jpeg' : 'image/png', null, true);
 
                 if ($product !== null) {
-                    if (!$product->trashed()) {
+                    if (! $product->trashed()) {
                         $products->finishInitialStock($product);
+                        if ($hasPhoto && str_ends_with($product->image_path, '.png')
+                            && Storage::disk('public')->get($product->image_path) === file_get_contents($placeholder)) {
+                            $products->update($product->id, ['image' => $image]);
+                        }
                     }
 
                     continue;
@@ -109,7 +119,7 @@ class DemoCatalogSeeder extends Seeder
                     'name' => $name,
                     'description' => $description,
                     'price' => $price,
-                    'image' => new UploadedFile($image, $entry['image'], 'image/png', null, true),
+                    'image' => $image,
                     'initial_quantity' => $stock,
                 ], $key);
             }

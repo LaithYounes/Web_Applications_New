@@ -4,20 +4,25 @@ use App\Modules\Orders\Controllers\CartController;
 use App\Modules\Orders\Controllers\OrderController;
 use Illuminate\Support\Facades\Route;
 
-Route::middleware('auth:api')->group(function () {
+$browser ??= false;
 
-    // Cart endpoints
-    Route::get('/cart', [CartController::class, 'show']);
-    Route::post('/cart/items', [CartController::class, 'add']);
+Route::middleware('auth:api')->group(function () use ($browser) {
 
-    Route::put('/cart/items/{itemId}', [CartController::class, 'update'])
-        ->whereNumber('itemId');
+    // Keep the Android contract while limiting browser shopping to customers.
+    Route::middleware(($browser ?? false) ? ['role:customer'] : [])->group(function () {
+        Route::get('/cart', [CartController::class, 'show']);
+        Route::post('/cart/items', [CartController::class, 'add']);
 
-    Route::delete('/cart/items/{itemId}', [CartController::class, 'remove'])
-        ->whereNumber('itemId');
+        Route::put('/cart/items/{itemId}', [CartController::class, 'update'])
+            ->whereNumber('itemId');
+
+        Route::delete('/cart/items/{itemId}', [CartController::class, 'remove'])
+            ->whereNumber('itemId');
+
+        Route::post('/orders', [OrderController::class, 'store']);
+    });
 
     // Orders endpoints - authenticated users
-    Route::post('/orders', [OrderController::class, 'store']);
     Route::get('/orders', [OrderController::class, 'index']);
 
     Route::get('/orders/{id}', [OrderController::class, 'show'])

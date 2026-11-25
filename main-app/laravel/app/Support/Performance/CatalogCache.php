@@ -141,6 +141,16 @@ class CatalogCache
         $cached = null;
         try {
             $cached = Cache::get($key);
+            //this block to read which container read the cache
+            if (request()->header('X-Cache-Demo') === '1') {
+             Log::channel('single')->info('PRODUCT_CACHE_DEMO', [
+                 'container' => gethostname(),
+                 'store' => config('cache.default'),
+                 'key' => $key,
+                 'result' => is_array($cached) ? 'HIT' : 'MISS',
+              ]);
+            }
+            //end block
         } catch (Throwable $exception) {
             Log::warning('Catalog cache read failed; using database.', [
                 'key' => $key,

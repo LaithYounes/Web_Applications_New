@@ -8,11 +8,7 @@ use RuntimeException;
 
 class RabbitMqPublisher
 {
-    public function publish(
-        string $queue,
-        array $payload,
-        string $messageId,
-    ): void {
+    public function publish(string $queue,array $payload,string $messageId,): void {
         $body = json_encode($payload, JSON_THROW_ON_ERROR);
 
         $connection = new AMQPStreamConnection(
@@ -47,8 +43,7 @@ class RabbitMqPublisher
                 },
             );
 
-            $channel->set_return_listener(
-                static function () use (&$returned): void {
+            $channel->set_return_listener( static function () use (&$returned): void {
                     $returned = true;
                 },
             );

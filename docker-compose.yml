@@ -21,6 +21,7 @@ services:
 
     networks:
       - ecommerce_network
+      
 
     healthcheck:
       test:
@@ -67,19 +68,18 @@ services:
 
   app:
     image: ecommerce2026-app
+    scale: 3
     build:
       context: ./main-app/laravel
       dockerfile: Dockerfile
-    container_name: ecommerce2026-main-app
     restart: unless-stopped
 
-    ports:
-      - "127.0.0.1:8000:8000"
 
     env_file:
       - ./main-app/laravel/.env
 
     environment:
+      SESSION_DRIVER: ${STOREFRONT_SESSION_DRIVER:-database}
       DB_CONNECTION: mysql
       DB_HOST: mysql
       DB_PORT: 3306
@@ -93,10 +93,33 @@ services:
 
     networks:
       - ecommerce_network
+      - proxy_network
 
     volumes:
       - ./main-app/laravel:/var/www
       - laravel_vendor:/var/www/vendor
+
+
+
+  nginx:
+    image: nginx:1.28-alpine
+    container_name: ecommerce2026-nginx
+    restart: unless-stopped
+
+    ports:
+      - "127.0.0.1:8081:80"
+
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+
+    depends_on:
+      - app
+
+    networks:
+      proxy_network:
+        ipv4_address: 172.30.250.2
+
+
 
   inventory-service:
     build:
@@ -297,3 +320,10 @@ networks:
   ecommerce_network:
     name: ecommerce2026_network
     driver: bridge
+
+  proxy_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.30.250.0/24
+          ip_range: 172.30.250.128/25
